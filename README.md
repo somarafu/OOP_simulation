@@ -1,19 +1,58 @@
-# 🎈 Blank app template
+# NOVA시 스마트시티 자원 배분 시뮬레이터 — 대시보드
 
-A simple Streamlit app template for you to modify!
+## 실행 방법
 
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://blank-app-template.streamlit.app/)
+### 1. 의존성 설치
+```bash
+pip install -r requirements.txt
+```
 
-### How to run it on your own machine
+### 2. 실행
+```bash
+streamlit run dashboard.py
+```
+브라우저에서 `http://localhost:8501` 자동 오픈
 
-1. Install the requirements
+---
 
-   ```
-   $ pip install -r requirements.txt
-   ```
+## 사용 방법
 
-2. Run the app
+1. **왼쪽 사이드바**에서 프리셋 시나리오를 선택하거나 직접 슬라이더 조정
+2. **예산 배분** (복지/교육/에너지인프라/일반인프라/안전) — 합계 100%
+3. **에너지 배분** (태양광/수소연료전지/ESS/외부전력망) — 합계 100%
+4. **▶ 시뮬레이션 실행** 버튼 클릭
+5. 4개 탭에서 결과 확인
 
-   ```
-   $ streamlit run streamlit_app.py
-   ```
+---
+
+## 탭 구성
+
+| 탭 | 내용 |
+|----|------|
+| 📊 현황 대시보드 | KPI 카드, 구역별 만족도, 에너지 게이지, 니즈 레이더 차트 |
+| 🔬 시나리오 비교 | 전체 5개 프리셋 + 현재 입력 비교 바 차트 & 히트맵 |
+| ⚙️ 시스템 분석 | 비선형 함수 곡선, OOP 클래스 구조 |
+| 📖 프로젝트 소개 | 배경, 데이터 출처, 시나리오 가이드 |
+
+---
+
+## 파일 구조
+
+```
+nova_dashboard/
+├── dashboard.py      # Streamlit 대시보드 메인
+├── classes.py        # OOP 시뮬레이터 클래스 (14개)
+├── requirements.txt  # 의존성
+└── README_dashboard.md
+```
+
+---
+
+## 추천 시나리오
+
+| 시나리오 | 결과 |
+|---------|------|
+| 초기 상태 | B구역 위험 경보 발생 (47.7점) |
+| 복지 집중 | C구역 +8.3점, 트레이드오프 확인 |
+| 에너지 집중 | 자립률 70.5%, 선순환 작동 |
+| 선순환 최적 ⭐ | 도시 평균 69.6점 — 전체 최고 |
