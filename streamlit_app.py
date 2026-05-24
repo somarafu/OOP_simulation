@@ -6,7 +6,7 @@ simulation_story.py
 실행:
 streamlit run simulation_story.py
 
-필요 requirements.txt:
+requirements.txt:
 streamlit
 pandas
 plotly
@@ -131,8 +131,9 @@ DISTRICT_KEYS = [
 
 
 # ==================================================
-# 마을 지도 안 구역 위치
-# 내부 정보가 모두 보이도록 구역 크기를 크게 조정
+# 구역 정보
+# 전체 화면이 너무 커지지 않도록 이전보다 축소
+# 단, 내부 박스가 잘리지 않도록 높이는 충분히 확보
 # ==================================================
 DISTRICT_INFO = {
     "A구역(산업단지)": {
@@ -140,10 +141,10 @@ DISTRICT_INFO = {
         "label": "A구역 산업단지",
         "icon": "🏭",
         "desc": "근로자 중심 · 이동성·에너지·인프라 민감",
-        "x": 80,
-        "y": 760,
-        "w": 455,
-        "h": 520,
+        "x": 70,
+        "y": 565,
+        "w": 390,
+        "h": 490,
         "people": ["👷", "👩‍🏭", "🧑‍💼", "👨‍🔧", "👩‍💼"],
         "weights": {
             "welfare": 0.45,
@@ -159,9 +160,9 @@ DISTRICT_INFO = {
         "icon": "🎓",
         "desc": "학생 중심 · 교육·문화·기회 민감",
         "x": 150,
-        "y": 150,
-        "w": 455,
-        "h": 520,
+        "y": 115,
+        "w": 390,
+        "h": 490,
         "people": ["🧑‍🎓", "👩‍🎓", "🧑‍💻", "👨‍🎓", "👩‍💻"],
         "weights": {
             "welfare": 0.35,
@@ -176,10 +177,10 @@ DISTRICT_INFO = {
         "label": "C구역 복지타운",
         "icon": "🏥",
         "desc": "노인·취약계층 중심 · 복지·안전 민감",
-        "x": 995,
-        "y": 150,
-        "w": 455,
-        "h": 520,
+        "x": 805,
+        "y": 115,
+        "w": 390,
+        "h": 490,
         "people": ["👵", "👴", "👩‍⚕️", "🧓", "👨‍⚕️"],
         "weights": {
             "welfare": 1.65,
@@ -194,10 +195,10 @@ DISTRICT_INFO = {
         "label": "D구역 신도시",
         "icon": "🏙️",
         "desc": "혼합형 시민 구성 · 균형 정책 반응",
-        "x": 575,
-        "y": 790,
-        "w": 455,
-        "h": 520,
+        "x": 470,
+        "y": 660,
+        "w": 390,
+        "h": 490,
         "people": ["👨‍👩‍👧", "🧑‍💼", "👩‍💻", "🧑", "👨‍👩‍👦"],
         "weights": {
             "welfare": 0.90,
@@ -212,10 +213,10 @@ DISTRICT_INFO = {
         "label": "E구역 구도심",
         "icon": "🏘️",
         "desc": "노후 인프라 · 복지·안전·생활SOC 민감",
-        "x": 1070,
-        "y": 780,
-        "w": 455,
-        "h": 520,
+        "x": 870,
+        "y": 635,
+        "w": 390,
+        "h": 490,
         "people": ["🧑", "👵", "👴", "👨‍👩‍👧", "👩"],
         "weights": {
             "welfare": 1.15,
@@ -312,7 +313,7 @@ ENERGY_ITEMS = {
 
 
 # ==================================================
-# Streamlit CSS
+# Streamlit 기본 CSS
 # ==================================================
 st.markdown("""
 <style>
@@ -657,13 +658,13 @@ def get_facilities_for_district(district_key, budget_values):
     weighted_items = []
     for key, value in budget_values.items():
         item = BUDGET_ITEMS[key]
-        count = clamp(round((value * weights[key]) / 22), 1, 3)
+        count = clamp(round((value * weights[key]) / 24), 1, 3)
 
         for _ in range(count):
             weighted_items.append((key, item["object"], item["name"], value * weights[key]))
 
     weighted_items.sort(key=lambda x: x[3], reverse=True)
-    return weighted_items[:7]
+    return weighted_items[:6]
 
 
 def get_residents_for_district(district_key, score):
@@ -679,7 +680,7 @@ def get_residents_for_district(district_key, score):
         mood = "😄"
 
     residents = []
-    for i in range(10):
+    for i in range(8):
         person = info["people"][i % len(info["people"])]
         residents.append((person, mood))
 
@@ -1030,20 +1031,18 @@ def make_main_scene_html(
 
     .root {{
         width: 100%;
-        padding: 10px 8px 32px;
+        padding: 8px 6px 28px;
         color: #1f2328;
     }}
 
     .hero {{
-        background:
-            linear-gradient(135deg, #26364f 0%, #315f80 52%, #4b8f9f 100%);
-        border-radius: 28px;
-        padding: 28px 30px;
+        background: linear-gradient(135deg, #26364f 0%, #315f80 52%, #4b8f9f 100%);
+        border-radius: 24px;
+        padding: 24px 28px;
         color: white;
-        position: relative;
         overflow: hidden;
-        box-shadow: 0 18px 34px rgba(38,54,79,0.22);
-        margin-bottom: 18px;
+        box-shadow: 0 14px 28px rgba(38,54,79,0.20);
+        margin-bottom: 16px;
     }}
 
     .hero-content {{
@@ -1054,7 +1053,7 @@ def make_main_scene_html(
     }}
 
     .hero-eyebrow {{
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 900;
         letter-spacing: 0.14em;
         text-transform: uppercase;
@@ -1063,23 +1062,23 @@ def make_main_scene_html(
     }}
 
     .hero-title {{
-        font-size: 38px;
+        font-size: 34px;
         font-weight: 900;
         line-height: 1.22;
         margin-bottom: 10px;
     }}
 
     .hero-desc {{
-        font-size: 16px;
-        line-height: 1.75;
+        font-size: 15px;
+        line-height: 1.7;
         opacity: 0.96;
     }}
 
     .hero-panel {{
         background: rgba(255,255,255,0.14);
         border: 1px solid rgba(255,255,255,0.24);
-        border-radius: 22px;
-        padding: 16px 18px;
+        border-radius: 20px;
+        padding: 14px 16px;
         backdrop-filter: blur(4px);
     }}
 
@@ -1087,7 +1086,7 @@ def make_main_scene_html(
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 10px 0;
+        padding: 9px 0;
         border-bottom: 1px solid rgba(255,255,255,0.16);
     }}
 
@@ -1096,33 +1095,33 @@ def make_main_scene_html(
     }}
 
     .hero-stat-name {{
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 800;
     }}
 
     .hero-stat-value {{
-        font-size: 18px;
+        font-size: 17px;
         font-weight: 900;
     }}
 
     .hud-grid {{
         display: grid;
         grid-template-columns: repeat(4, 1fr);
-        gap: 14px;
+        gap: 12px;
         margin-bottom: 18px;
     }}
 
     .hud-card {{
         background: #ffffff;
         border: 1px solid #d0d7de;
-        border-radius: 22px;
-        padding: 18px 20px;
-        min-height: 116px;
-        box-shadow: 0 10px 20px rgba(27,31,36,0.06);
+        border-radius: 20px;
+        padding: 16px 18px;
+        min-height: 105px;
+        box-shadow: 0 8px 18px rgba(27,31,36,0.05);
     }}
 
     .hud-label {{
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 900;
         letter-spacing: 0.08em;
         text-transform: uppercase;
@@ -1131,38 +1130,38 @@ def make_main_scene_html(
     }}
 
     .hud-value {{
-        font-size: 30px;
+        font-size: 27px;
         font-weight: 900;
         color: #0969da;
         line-height: 1.05;
     }}
 
     .hud-sub {{
-        font-size: 13px;
+        font-size: 12px;
         color: #57606a;
-        line-height: 1.55;
+        line-height: 1.5;
         margin-top: 8px;
     }}
 
     .section-title {{
-        font-size: 24px;
+        font-size: 22px;
         font-weight: 900;
         margin-bottom: 6px;
         color: #1f2328;
     }}
 
     .section-sub {{
-        font-size: 14px;
+        font-size: 13px;
         color: #57606a;
-        line-height: 1.65;
-        margin-bottom: 14px;
+        line-height: 1.6;
+        margin-bottom: 12px;
     }}
 
     .inventory-grid {{
         display: grid;
         grid-template-columns: repeat(5, minmax(0, 1fr));
-        gap: 12px;
-        margin-bottom: 22px;
+        gap: 10px;
+        margin-bottom: 20px;
     }}
 
     .inventory-grid.energy {{
@@ -1173,63 +1172,60 @@ def make_main_scene_html(
         background: #ffffff;
         border: 1px solid #d0d7de;
         border-top: 4px solid var(--item-color);
-        border-radius: 20px;
-        padding: 14px;
-        box-shadow: 0 10px 18px rgba(27,31,36,0.06);
-        position: relative;
-        overflow: hidden;
+        border-radius: 18px;
+        padding: 12px;
+        box-shadow: 0 8px 16px rgba(27,31,36,0.05);
     }}
 
     .item-main {{
         display: grid;
-        grid-template-columns: 48px 1fr 50px;
+        grid-template-columns: 42px 1fr 46px;
         align-items: center;
-        gap: 10px;
-        margin-bottom: 10px;
+        gap: 8px;
+        margin-bottom: 9px;
     }}
 
     .item-orb {{
-        width: 48px;
-        height: 48px;
-        border-radius: 17px;
+        width: 42px;
+        height: 42px;
+        border-radius: 15px;
         background: var(--item-color);
         color: white;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 27px;
-        box-shadow: 0 8px 16px rgba(27,31,36,0.13);
+        font-size: 24px;
     }}
 
     .item-name {{
-        font-size: 15px;
+        font-size: 14px;
         font-weight: 900;
         color: #1f2328;
         margin-bottom: 2px;
     }}
 
     .item-type {{
-        font-size: 11px;
+        font-size: 10.5px;
         color: #57606a;
-        line-height: 1.35;
+        line-height: 1.3;
     }}
 
     .item-rank {{
         background: var(--item-color);
         color: white;
         border-radius: 999px;
-        padding: 5px 8px;
-        font-size: 11px;
+        padding: 5px 7px;
+        font-size: 10px;
         font-weight: 900;
         text-align: center;
     }}
 
     .item-desc {{
-        font-size: 12px;
+        font-size: 11px;
         color: #57606a;
-        line-height: 1.5;
-        min-height: 38px;
-        margin-bottom: 10px;
+        line-height: 1.45;
+        min-height: 34px;
+        margin-bottom: 8px;
     }}
 
     .item-bottom {{
@@ -1240,7 +1236,7 @@ def make_main_scene_html(
     }}
 
     .item-percent {{
-        font-size: 22px;
+        font-size: 20px;
         font-weight: 900;
         color: var(--item-color);
     }}
@@ -1251,8 +1247,8 @@ def make_main_scene_html(
     }}
 
     .slot {{
-        width: 12px;
-        height: 12px;
+        width: 11px;
+        height: 11px;
         border-radius: 4px;
         background: #e5e7eb;
     }}
@@ -1265,44 +1261,44 @@ def make_main_scene_html(
         width: 100%;
         overflow-x: auto;
         padding-bottom: 10px;
-        margin-bottom: 24px;
+        margin-bottom: 22px;
     }}
 
     .village-board {{
         position: relative;
-        width: 1600px;
-        height: 1390px;
-        border-radius: 32px;
+        width: 1320px;
+        height: 1180px;
+        border-radius: 30px;
         overflow: hidden;
         border: 1px solid #d0d7de;
         background:
             linear-gradient(180deg, #eaf5ff 0%, #eef8ff 22%, #edf7e6 55%, #dfeccd 100%);
-        box-shadow: 0 18px 34px rgba(27,31,36,0.08);
+        box-shadow: 0 16px 30px rgba(27,31,36,0.08);
     }}
 
     .village-title-card {{
         position: absolute;
-        left: 28px;
-        top: 28px;
-        width: 390px;
+        left: 24px;
+        top: 24px;
+        width: 330px;
         background: rgba(255,255,255,0.94);
         border: 1px solid #d0d7de;
-        border-radius: 22px;
-        padding: 16px 18px;
-        box-shadow: 0 10px 20px rgba(27,31,36,0.08);
+        border-radius: 20px;
+        padding: 14px 16px;
+        box-shadow: 0 8px 18px rgba(27,31,36,0.07);
         z-index: 20;
     }}
 
     .village-title {{
-        font-size: 23px;
+        font-size: 21px;
         font-weight: 900;
         color: #1f2328;
         margin-bottom: 4px;
     }}
 
     .village-desc {{
-        font-size: 13px;
-        line-height: 1.55;
+        font-size: 12px;
+        line-height: 1.5;
         color: #57606a;
     }}
 
@@ -1318,40 +1314,40 @@ def make_main_scene_html(
         position: absolute;
         left: 0;
         top: 50%;
-        width: 1900px;
+        width: 1600px;
         border-top: 3px dashed rgba(255,255,255,0.72);
     }}
 
     .road-1 {{
         left: -100px;
-        top: 690px;
-        width: 1900px;
-        height: 46px;
+        top: 570px;
+        width: 1600px;
+        height: 42px;
         transform: rotate(-7deg);
     }}
 
     .road-2 {{
-        left: 530px;
-        top: -100px;
-        width: 54px;
-        height: 1600px;
+        left: 440px;
+        top: -80px;
+        width: 50px;
+        height: 1400px;
         transform: rotate(10deg);
     }}
 
     .road-3 {{
-        left: 1035px;
-        top: -100px;
-        width: 54px;
-        height: 1600px;
+        left: 880px;
+        top: -80px;
+        width: 50px;
+        height: 1400px;
         transform: rotate(-12deg);
     }}
 
     .water-line {{
         position: absolute;
         left: -80px;
-        bottom: 25px;
-        width: 1850px;
-        height: 80px;
+        bottom: 24px;
+        width: 1550px;
+        height: 70px;
         transform: rotate(-5deg);
         background:
             repeating-linear-gradient(
@@ -1370,105 +1366,105 @@ def make_main_scene_html(
             linear-gradient(180deg, rgba(255,255,255,0.36), rgba(255,255,255,0.20)),
             repeating-linear-gradient(45deg, #dcedc5 0 18px, #d7e8bf 18px 36px);
         border: 2px solid rgba(255,255,255,0.95);
-        border-radius: 28px;
-        box-shadow: 0 16px 30px rgba(27,31,36,0.12);
+        border-radius: 26px;
+        box-shadow: 0 14px 26px rgba(27,31,36,0.12);
         overflow: hidden;
         z-index: 5;
-        padding: 18px;
+        padding: 14px;
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 10px;
     }}
 
     .district-header {{
-        min-height: 82px;
+        min-height: 70px;
         background: rgba(255,255,255,0.98);
         border: 1px solid #d0d7de;
-        border-radius: 22px;
+        border-radius: 20px;
         display: grid;
-        grid-template-columns: 58px 1fr;
-        gap: 12px;
+        grid-template-columns: 50px 1fr;
+        gap: 10px;
         align-items: center;
-        padding: 12px 14px;
-        z-index: 15;
-        box-shadow: 0 7px 14px rgba(27,31,36,0.06);
+        padding: 10px 12px;
+        box-shadow: 0 6px 12px rgba(27,31,36,0.05);
+        flex-shrink: 0;
     }}
 
     .district-icon {{
-        width: 52px;
-        height: 52px;
-        border-radius: 18px;
+        width: 46px;
+        height: 46px;
+        border-radius: 16px;
         background: #f6f8fa;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 29px;
+        font-size: 26px;
     }}
 
     .district-title {{
-        font-size: 19px;
+        font-size: 18px;
         font-weight: 900;
         color: #1f2328;
-        margin-bottom: 4px;
+        margin-bottom: 3px;
         white-space: nowrap;
     }}
 
     .district-desc {{
-        font-size: 13px;
+        font-size: 12px;
         color: #57606a;
-        line-height: 1.4;
+        line-height: 1.35;
         white-space: normal;
     }}
 
     .applied-panel {{
-        min-height: 84px;
+        min-height: 76px;
         background: rgba(255,255,255,0.96);
         border: 1px solid #d0d7de;
-        border-radius: 20px;
-        z-index: 16;
-        padding: 10px 12px;
-        box-shadow: 0 6px 12px rgba(27,31,36,0.05);
+        border-radius: 18px;
+        padding: 9px 10px;
+        box-shadow: 0 5px 10px rgba(27,31,36,0.05);
+        flex-shrink: 0;
     }}
 
     .applied-title {{
-        font-size: 12px;
+        font-size: 11.5px;
         font-weight: 900;
         color: #57606a;
-        margin-bottom: 8px;
+        margin-bottom: 7px;
     }}
 
     .applied-list {{
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 10px;
+        gap: 8px;
     }}
 
     .applied-item {{
         display: grid;
-        grid-template-columns: 34px 1fr;
-        gap: 8px;
+        grid-template-columns: 30px 1fr;
+        gap: 7px;
         align-items: center;
         min-width: 0;
         background: #f6f8fa;
         border: 1px solid #e5e7eb;
-        border-radius: 14px;
-        padding: 7px 8px;
+        border-radius: 13px;
+        padding: 6px 7px;
     }}
 
     .applied-icon {{
-        width: 32px;
-        height: 32px;
-        border-radius: 11px;
+        width: 29px;
+        height: 29px;
+        border-radius: 10px;
         background: var(--item-color);
         color: white;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 18px;
+        font-size: 16px;
     }}
 
     .applied-name {{
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 900;
         color: #1f2328;
         white-space: nowrap;
@@ -1477,26 +1473,27 @@ def make_main_scene_html(
     }}
 
     .applied-sub {{
-        font-size: 10px;
+        font-size: 9.5px;
         color: #6b7280;
     }}
 
     .district-scene {{
         position: relative;
-        min-height: 145px;
-        background: rgba(255,255,255,0.42);
+        height: 128px;
+        background: rgba(255,255,255,0.44);
         border: 1px solid rgba(255,255,255,0.78);
-        border-radius: 20px;
+        border-radius: 18px;
         overflow: hidden;
         display: grid;
         grid-template-columns: 1.05fr 0.95fr;
-        gap: 12px;
-        padding: 12px;
+        gap: 10px;
+        padding: 10px;
+        flex-shrink: 0;
     }}
 
     .scene-road {{
         position: absolute;
-        background: rgba(123,132,145,0.62);
+        background: rgba(123,132,145,0.55);
         z-index: 1;
         pointer-events: none;
     }}
@@ -1506,187 +1503,188 @@ def make_main_scene_html(
         position: absolute;
         left: 0;
         top: 50%;
-        width: 700px;
+        width: 600px;
         border-top: 2px dashed rgba(255,255,255,0.68);
     }}
 
     .scene-road-a {{
         left: -60px;
-        top: 72px;
-        width: 620px;
-        height: 24px;
+        top: 66px;
+        width: 560px;
+        height: 22px;
         transform: rotate(-6deg);
     }}
 
     .scene-road-b {{
-        left: 210px;
+        left: 190px;
         top: -40px;
-        width: 24px;
-        height: 240px;
+        width: 22px;
+        height: 220px;
         transform: rotate(10deg);
     }}
 
     .scene-section {{
         position: relative;
         z-index: 5;
-        background: rgba(255,255,255,0.78);
+        background: rgba(255,255,255,0.80);
         border: 1px solid #e5e7eb;
-        border-radius: 18px;
-        padding: 10px;
+        border-radius: 16px;
+        padding: 8px;
     }}
 
     .scene-label {{
-        font-size: 11px;
+        font-size: 10.5px;
         font-weight: 900;
         color: #57606a;
-        margin-bottom: 8px;
+        margin-bottom: 6px;
     }}
 
     .facility-grid {{
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 8px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
     }}
 
     .facility-item {{
         background: #ffffff;
         border: 1px solid #e5e7eb;
-        border-radius: 14px;
-        min-height: 58px;
+        border-radius: 12px;
+        min-height: 48px;
         text-align: center;
-        padding: 6px 4px;
-        box-shadow: 0 4px 8px rgba(27,31,36,0.06);
+        padding: 5px 3px;
+        box-shadow: 0 3px 7px rgba(27,31,36,0.05);
     }}
 
     .facility-emoji {{
-        width: 32px;
-        height: 32px;
-        margin: 0 auto 3px;
-        border-radius: 11px;
+        width: 28px;
+        height: 28px;
+        margin: 0 auto 2px;
+        border-radius: 10px;
         background: var(--item-color);
         color: white;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 19px;
+        font-size: 17px;
     }}
 
     .facility-caption {{
-        font-size: 9px;
+        font-size: 8.5px;
         font-weight: 800;
         color: #374151;
-        line-height: 1.15;
+        line-height: 1.1;
     }}
 
     .resident-grid {{
         display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-        gap: 8px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 6px;
     }}
 
     .resident-item {{
         position: relative;
         background: #ffffff;
         border: 1px solid #e5e7eb;
-        border-radius: 14px;
-        height: 48px;
+        border-radius: 12px;
+        height: 39px;
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 4px 8px rgba(27,31,36,0.05);
+        box-shadow: 0 3px 7px rgba(27,31,36,0.05);
     }}
 
     .resident-person {{
-        font-size: 24px;
+        font-size: 20px;
     }}
 
     .resident-mood {{
         position: absolute;
-        right: -5px;
-        top: -6px;
-        width: 18px;
-        height: 18px;
+        right: -4px;
+        top: -5px;
+        width: 16px;
+        height: 16px;
         border-radius: 50%;
         background: #ffffff;
         border: 2px solid #d0d7de;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 10px;
-        box-shadow: 0 4px 8px rgba(27,31,36,0.12);
+        font-size: 9px;
+        box-shadow: 0 3px 7px rgba(27,31,36,0.10);
     }}
 
     .comment-bubble {{
-        min-height: 76px;
+        min-height: 62px;
         background: rgba(255,255,255,0.97);
         border: 1px solid #d0d7de;
-        border-radius: 20px;
-        padding: 13px 15px;
-        z-index: 18;
-        box-shadow: 0 8px 16px rgba(27,31,36,0.07);
+        border-radius: 18px;
+        padding: 11px 13px;
+        box-shadow: 0 6px 13px rgba(27,31,36,0.06);
+        flex-shrink: 0;
     }}
 
     .comment-title {{
-        font-size: 15px;
+        font-size: 14px;
         font-weight: 900;
         color: #1f2328;
-        margin-bottom: 6px;
+        margin-bottom: 5px;
     }}
 
     .comment-text {{
-        font-size: 13px;
+        font-size: 12px;
         color: #57606a;
-        line-height: 1.5;
+        line-height: 1.4;
         white-space: normal;
     }}
 
     .district-score {{
-        min-height: 78px;
+        min-height: 66px;
         background: rgba(255,255,255,0.98);
         border: 1px solid #d0d7de;
-        border-radius: 22px;
+        border-radius: 20px;
         display: grid;
-        grid-template-columns: 54px 1fr 78px;
-        gap: 12px;
+        grid-template-columns: 46px 1fr 70px;
+        gap: 10px;
         align-items: center;
-        padding: 12px 14px;
-        z-index: 17;
-        box-shadow: 0 8px 16px rgba(27,31,36,0.06);
+        padding: 10px 12px;
+        box-shadow: 0 6px 13px rgba(27,31,36,0.06);
+        flex-shrink: 0;
+        margin-top: auto;
     }}
 
     .score-face {{
-        width: 48px;
-        height: 48px;
-        border-radius: 17px;
+        width: 42px;
+        height: 42px;
+        border-radius: 15px;
         background: #fff7ed;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 28px;
+        font-size: 25px;
     }}
 
     .score-row {{
         display: flex;
         justify-content: space-between;
         align-items: center;
-        gap: 8px;
-        margin-bottom: 7px;
+        gap: 7px;
+        margin-bottom: 6px;
     }}
 
     .score-state {{
-        font-size: 15px;
+        font-size: 14px;
         font-weight: 900;
         color: #1f2328;
     }}
 
     .score-stars {{
-        font-size: 14px;
+        font-size: 12.5px;
         color: #f59e0b;
         font-weight: 800;
     }}
 
     .score-bar {{
-        height: 10px;
+        height: 9px;
         background: #e5e7eb;
         border-radius: 999px;
         overflow: hidden;
@@ -1698,7 +1696,7 @@ def make_main_scene_html(
     }}
 
     .score-num {{
-        font-size: 34px;
+        font-size: 31px;
         font-weight: 900;
         text-align: right;
         line-height: 1;
@@ -1707,55 +1705,55 @@ def make_main_scene_html(
     .energy-section {{
         background: #ffffff;
         border: 1px solid #d0d7de;
-        border-radius: 28px;
-        padding: 22px;
-        box-shadow: 0 14px 28px rgba(27,31,36,0.07);
-        margin-bottom: 24px;
+        border-radius: 26px;
+        padding: 20px;
+        box-shadow: 0 12px 24px rgba(27,31,36,0.06);
+        margin-bottom: 22px;
     }}
 
     .energy-object-grid-section {{
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 14px;
+        gap: 12px;
     }}
 
     .energy-field-card {{
         background: #f8fafc;
         border: 1px solid #e5e7eb;
         border-top: 4px solid var(--item-color);
-        border-radius: 20px;
-        padding: 14px;
-        min-height: 220px;
+        border-radius: 18px;
+        padding: 13px;
+        min-height: 210px;
     }}
 
     .energy-field-head {{
         display: grid;
-        grid-template-columns: 44px 1fr;
-        gap: 10px;
+        grid-template-columns: 42px 1fr;
+        gap: 9px;
         align-items: center;
-        margin-bottom: 12px;
+        margin-bottom: 11px;
     }}
 
     .energy-field-icon {{
-        width: 42px;
-        height: 42px;
-        border-radius: 15px;
+        width: 40px;
+        height: 40px;
+        border-radius: 14px;
         background: var(--item-color);
         color: white;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 24px;
+        font-size: 23px;
     }}
 
     .energy-field-name {{
-        font-size: 15px;
+        font-size: 14px;
         font-weight: 900;
         color: #1f2328;
     }}
 
     .energy-field-value {{
-        font-size: 13px;
+        font-size: 12px;
         color: var(--item-color);
         font-weight: 900;
     }}
@@ -1763,93 +1761,93 @@ def make_main_scene_html(
     .energy-object-grid {{
         display: grid;
         grid-template-columns: repeat(5, minmax(0, 1fr));
-        gap: 8px;
-        min-height: 94px;
+        gap: 7px;
+        min-height: 88px;
         margin-bottom: 10px;
     }}
 
     .energy-object {{
         background: #ffffff;
         border: 1px solid #e5e7eb;
-        border-radius: 14px;
-        height: 46px;
+        border-radius: 13px;
+        height: 42px;
         display: flex;
         align-items: center;
         justify-content: center;
     }}
 
     .energy-object-icon {{
-        width: 34px;
-        height: 34px;
-        border-radius: 12px;
+        width: 31px;
+        height: 31px;
+        border-radius: 11px;
         background: var(--item-color);
         color: white;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 21px;
+        font-size: 19px;
     }}
 
     .energy-empty {{
         grid-column: 1 / -1;
         color: #8c959f;
-        font-size: 13px;
+        font-size: 12px;
         display: flex;
         align-items: center;
         justify-content: center;
-        height: 90px;
+        height: 82px;
         border: 1px dashed #d0d7de;
-        border-radius: 14px;
+        border-radius: 13px;
         background: #ffffff;
     }}
 
     .energy-field-desc {{
-        font-size: 12px;
+        font-size: 11.5px;
         color: #57606a;
-        line-height: 1.5;
+        line-height: 1.45;
     }}
 
     .reaction-box {{
         background: #ffffff;
         border: 1px solid #d0d7de;
-        border-radius: 24px;
-        padding: 20px 22px;
-        box-shadow: 0 10px 22px rgba(27,31,36,0.06);
+        border-radius: 22px;
+        padding: 18px 20px;
+        box-shadow: 0 8px 18px rgba(27,31,36,0.05);
         margin-bottom: 18px;
     }}
 
     .reaction-title {{
-        font-size: 22px;
+        font-size: 20px;
         font-weight: 900;
         color: #1f2328;
         margin-bottom: 8px;
     }}
 
     .reaction-desc {{
-        font-size: 15px;
+        font-size: 14px;
         color: #57606a;
-        line-height: 1.75;
+        line-height: 1.7;
     }}
 
     .final-card {{
         background: linear-gradient(135deg, #f0fff4 0%, #ddf4ff 100%);
         border: 1px solid #aceebb;
-        border-radius: 26px;
-        padding: 24px 26px;
-        box-shadow: 0 12px 24px rgba(27,31,36,0.06);
+        border-radius: 24px;
+        padding: 22px 24px;
+        box-shadow: 0 10px 22px rgba(27,31,36,0.05);
         margin-top: 10px;
     }}
 
     .final-title {{
-        font-size: 26px;
+        font-size: 24px;
         font-weight: 900;
         margin-bottom: 8px;
         color: #1f2328;
     }}
 
     .final-desc {{
-        font-size: 15px;
-        line-height: 1.75;
+        font-size: 14px;
+        line-height: 1.7;
         color: #57606a;
         margin-bottom: 16px;
     }}
@@ -1859,28 +1857,28 @@ def make_main_scene_html(
         background: #0969da;
         color: white !important;
         text-decoration: none !important;
-        padding: 12px 18px;
-        border-radius: 14px;
-        font-size: 14px;
+        padding: 11px 17px;
+        border-radius: 13px;
+        font-size: 13px;
         font-weight: 900;
-        box-shadow: 0 8px 16px rgba(9,105,218,0.18);
+        box-shadow: 0 7px 14px rgba(9,105,218,0.18);
     }}
 
     .dash-link-empty {{
         display: inline-block;
         background: rgba(255,255,255,0.78);
         border: 1px solid #d0d7de;
-        border-radius: 14px;
-        padding: 12px 14px;
-        font-size: 13px;
+        border-radius: 13px;
+        padding: 11px 13px;
+        font-size: 12px;
         color: #57606a;
     }}
 
     .mini-note {{
         margin-top: 10px;
-        font-size: 11px;
+        font-size: 10.5px;
         color: #8c959f;
-        line-height: 1.5;
+        line-height: 1.45;
     }}
 
     @media (max-width: 1100px) {{
@@ -1930,7 +1928,7 @@ def make_main_scene_html(
         <div class="hud-grid">
             <div class="hud-card">
                 <div class="hud-label">선택 정책</div>
-                <div class="hud-value" style="font-size:24px;">{html_lib.escape(preset_choice)}</div>
+                <div class="hud-value" style="font-size:23px;">{html_lib.escape(preset_choice)}</div>
                 <div class="hud-sub">마을 전체에 정책 처치가 적용됩니다.</div>
             </div>
 
@@ -2020,7 +2018,7 @@ def make_main_scene_html(
             </div>
             {dashboard_button}
             <div class="mini-note">
-                이 버전은 마을형 배치를 유지하되, 구역 내부 구조를 재정리하여 흰 박스 안의 정보가 모두 보이도록 수정했습니다.
+                이 버전은 만족도 박스가 잘리지 않도록 구역 내부 높이와 전체 마을 비율을 다시 조정했습니다.
             </div>
         </div>
     </div>
@@ -2120,10 +2118,9 @@ st.markdown("""
 <div class="box-warn">
 <b>이번 수정의 핵심</b><br>
 - 마을형 지도 유지<br>
-- A~E구역이 하나의 마을 안에 함께 배치<br>
-- 흰 박스 내부 정보가 잘리지 않도록 내부 구조를 세로형으로 재정리<br>
-- 적용 아이템, 시설 변화, 주민 반응, 댓글, 만족도를 모두 분리해서 표시<br>
-- 사람들의 만족도를 표정 이모지와 댓글로 표현
+- 전체 구역 크기를 이전보다 축소해 화면 비율 개선<br>
+- 만족도 박스가 잘리지 않도록 구역 내부 구조와 높이 재조정<br>
+- 적용 아이템, 시설 변화, 주민 반응, 댓글, 만족도를 모두 분리해서 표시
 </div>
 """, unsafe_allow_html=True)
 
@@ -2158,7 +2155,7 @@ scene_html = make_main_scene_html(
     dashboard_url
 )
 
-components.html(scene_html, height=3800, scrolling=True)
+components.html(scene_html, height=3350, scrolling=True)
 
 st.markdown("### 발표용 연결 멘트 예시")
 st.markdown("""
