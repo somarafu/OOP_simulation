@@ -1,527 +1,454 @@
 """
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-NOVA시 스마트시티 그림형 정책 처치 시뮬레이션
+NOVA시 스마트시티 게임형 정책 처치 시뮬레이션
 simulation_story.py
 
-이 앱은 최종 수치 결과를 계산하는 대시보드가 아니라,
-예산·에너지 배분이라는 정책 처치가 도시 장면을 어떻게 바꾸는지
-그림 중심으로 보여주는 1차 시뮬레이션 앱입니다.
+역할:
+- 1차 결과물: 예산·에너지 배분 처치가 도시 구조를 바꾸는 장면을 게임처럼 시각화
+- 2차 결과물: 기존 dashboard.py에서 만족도·자립률·구역별 결과를 상세 분석
 
 실행:
 streamlit run simulation_story.py
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 
-import time
+import os
+import sys
+import html as html_lib
 import urllib.parse
+from itertools import cycle
+
 import streamlit as st
+import streamlit.components.v1 as components
+
+sys.path.insert(0, os.path.dirname(__file__))
+
+# ==================================================
+# classes.py가 있으면 실제 OOP 모델을 사용하고,
+# 없거나 오류가 나면 화면용 간이 계산으로 대체
+# ==================================================
+try:
+    from classes import (
+        Worker, Student, Caregiver, Unemployed, Elder,
+        SolarPanel, HydrogenCell, ESS, ExternalGrid,
+        Resource, EnergyGrid, District, City,
+        BudgetAllocationError, EnergyAllocationError
+    )
+    HAS_CLASSES = True
+except Exception:
+    HAS_CLASSES = False
+
 
 # ==================================================
 # 페이지 설정
 # ==================================================
 st.set_page_config(
-    page_title="NOVA시 정책 처치 시뮬레이션",
-    page_icon="🎬",
+    page_title="NOVA시 게임형 정책 처치 시뮬레이션",
+    page_icon="🎮",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# ==================================================
-# CSS
-# ==================================================
-st.markdown(
-    """
-    <style>
-    .stApp {
-        background: #ffffff;
-        color: #1f2328;
-    }
-
-    [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #f6f8fa 0%, #ffffff 100%);
-        border-right: 1px solid #d0d7de;
-    }
-
-    [data-testid="stSidebar"] label,
-    [data-testid="stSidebar"] p,
-    [data-testid="stSidebar"] span {
-        color: #1f2328 !important;
-    }
-
-    .hero {
-        background: linear-gradient(135deg, #0969da 0%, #8250df 100%);
-        border-radius: 28px;
-        padding: 42px 46px;
-        color: white;
-        margin-bottom: 28px;
-        box-shadow: 0 18px 42px rgba(9,105,218,0.22);
-    }
-
-    .hero .eyebrow {
-        font-size: 13px;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
-        font-weight: 900;
-        opacity: 0.9;
-        margin-bottom: 10px;
-    }
-
-    .hero .title {
-        font-size: 42px;
-        font-weight: 950;
-        line-height: 1.18;
-        margin-bottom: 14px;
-    }
-
-    .hero .subtitle {
-        font-size: 17px;
-        line-height: 1.75;
-        opacity: 0.96;
-        max-width: 1050px;
-    }
-
-    .pill-wrap {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin-top: 22px;
-    }
-
-    .pill {
-        background: rgba(255,255,255,0.17);
-        border: 1px solid rgba(255,255,255,0.28);
-        border-radius: 999px;
-        padding: 8px 14px;
-        font-size: 13px;
-        font-weight: 800;
-    }
-
-    .notice-card {
-        background: #fff8c5;
-        border: 1px solid #f0d66b;
-        border-radius: 18px;
-        padding: 18px 20px;
-        color: #1f2328;
-        line-height: 1.7;
-        font-size: 14px;
-        margin-bottom: 20px;
-    }
-
-    .stage-card {
-        background: #ffffff;
-        border: 1px solid #d0d7de;
-        border-radius: 24px;
-        padding: 26px 28px;
-        box-shadow: 0 12px 28px rgba(27,31,36,0.07);
-        margin-bottom: 22px;
-    }
-
-    .stage-title {
-        font-size: 28px;
-        font-weight: 950;
-        color: #1f2328;
-        margin-bottom: 8px;
-    }
-
-    .stage-desc {
-        font-size: 15px;
-        color: #57606a;
-        line-height: 1.75;
-        margin-bottom: 16px;
-    }
-
-    .process-wrap {
-        display: grid;
-        grid-template-columns: repeat(5, 1fr);
-        gap: 12px;
-        margin: 18px 0 22px;
-    }
-
-    .process-step {
-        background: #f6f8fa;
-        border: 1px solid #d0d7de;
-        border-radius: 18px;
-        padding: 16px 14px;
-        text-align: center;
-        min-height: 130px;
-    }
-
-    .process-step.active {
-        background: linear-gradient(135deg, #ddf4ff 0%, #f6f8fa 100%);
-        border: 2px solid #0969da;
-        box-shadow: 0 10px 26px rgba(9,105,218,0.15);
-    }
-
-    .process-icon {
-        font-size: 30px;
-        margin-bottom: 8px;
-    }
-
-    .process-title {
-        font-size: 14px;
-        font-weight: 950;
-        color: #1f2328;
-        margin-bottom: 6px;
-    }
-
-    .process-desc {
-        font-size: 12px;
-        color: #57606a;
-        line-height: 1.45;
-    }
-
-    .city-scene {
-        background: linear-gradient(180deg, #ddf4ff 0%, #ffffff 42%, #f0fff4 100%);
-        border: 1px solid #d0d7de;
-        border-radius: 28px;
-        padding: 24px;
-        margin-top: 18px;
-        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.6);
-    }
-
-    .city-sky {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 14px;
-    }
-
-    .city-title {
-        font-size: 20px;
-        font-weight: 950;
-        color: #1f2328;
-    }
-
-    .city-weather {
-        font-size: 30px;
-    }
-
-    .city-grid {
-        display: grid;
-        grid-template-columns: repeat(5, 1fr);
-        gap: 14px;
-        margin-top: 12px;
-    }
-
-    .district-zone {
-        background: rgba(255,255,255,0.88);
-        border: 1px solid #d0d7de;
-        border-radius: 22px;
-        padding: 16px 14px;
-        min-height: 210px;
-        box-shadow: 0 8px 20px rgba(27,31,36,0.06);
-    }
-
-    .district-name {
-        font-size: 14px;
-        font-weight: 950;
-        color: #1f2328;
-        margin-bottom: 8px;
-        text-align: center;
-    }
-
-    .district-sub {
-        font-size: 12px;
-        color: #57606a;
-        line-height: 1.45;
-        text-align: center;
-        margin-bottom: 10px;
-    }
-
-    .icon-field {
-        background: #f6f8fa;
-        border: 1px dashed #d0d7de;
-        border-radius: 16px;
-        padding: 12px 10px;
-        min-height: 118px;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        align-content: flex-start;
-        justify-content: center;
-    }
-
-    .scene-icon {
-        font-size: 28px;
-        display: inline-block;
-        animation: popIn 0.55s ease both;
-    }
-
-    @keyframes popIn {
-        0% { transform: scale(0.55); opacity: 0; }
-        70% { transform: scale(1.12); opacity: 1; }
-        100% { transform: scale(1); opacity: 1; }
-    }
-
-    .policy-board {
-        background: #ffffff;
-        border: 1px solid #d0d7de;
-        border-radius: 24px;
-        padding: 22px 24px;
-        box-shadow: 0 10px 26px rgba(27,31,36,0.07);
-        height: 100%;
-    }
-
-    .board-title {
-        font-size: 20px;
-        font-weight: 950;
-        color: #1f2328;
-        margin-bottom: 12px;
-    }
-
-    .board-desc {
-        font-size: 14px;
-        color: #57606a;
-        line-height: 1.65;
-        margin-bottom: 14px;
-    }
-
-    .treatment-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
-        margin-top: 14px;
-    }
-
-    .treatment-card {
-        background: #f6f8fa;
-        border: 1px solid #d0d7de;
-        border-radius: 18px;
-        padding: 16px 14px;
-        text-align: center;
-        min-height: 160px;
-    }
-
-    .treatment-card .big-icon {
-        font-size: 36px;
-        margin-bottom: 8px;
-    }
-
-    .treatment-card .label {
-        font-size: 15px;
-        font-weight: 950;
-        color: #1f2328;
-        margin-bottom: 6px;
-    }
-
-    .treatment-card .value {
-        font-size: 28px;
-        font-weight: 950;
-        color: #0969da;
-        margin-bottom: 4px;
-    }
-
-    .treatment-card .explain {
-        font-size: 12px;
-        color: #57606a;
-        line-height: 1.45;
-    }
-
-    .effect-strip {
-        display: grid;
-        grid-template-columns: repeat(5, 1fr);
-        gap: 10px;
-        margin: 18px 0;
-    }
-
-    .effect-item {
-        background: #ffffff;
-        border: 1px solid #d0d7de;
-        border-radius: 18px;
-        padding: 16px 14px;
-        text-align: center;
-        box-shadow: 0 8px 18px rgba(27,31,36,0.05);
-    }
-
-    .effect-icon {
-        font-size: 34px;
-        margin-bottom: 8px;
-    }
-
-    .effect-title {
-        font-size: 14px;
-        font-weight: 950;
-        color: #1f2328;
-        margin-bottom: 5px;
-    }
-
-    .effect-desc {
-        font-size: 12px;
-        color: #57606a;
-        line-height: 1.45;
-    }
-
-    .energy-field {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 14px;
-        margin-top: 16px;
-    }
-
-    .energy-zone {
-        background: #ffffff;
-        border: 1px solid #d0d7de;
-        border-radius: 22px;
-        padding: 18px 16px;
-        text-align: center;
-        min-height: 220px;
-        box-shadow: 0 8px 20px rgba(27,31,36,0.06);
-    }
-
-    .energy-title {
-        font-size: 15px;
-        font-weight: 950;
-        color: #1f2328;
-        margin-bottom: 8px;
-    }
-
-    .energy-desc {
-        font-size: 12px;
-        color: #57606a;
-        line-height: 1.5;
-        margin-bottom: 12px;
-    }
-
-    .energy-icons {
-        background: #f6f8fa;
-        border: 1px dashed #d0d7de;
-        border-radius: 16px;
-        padding: 12px;
-        min-height: 118px;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        justify-content: center;
-        align-content: flex-start;
-    }
-
-    .transition-arrow {
-        text-align: center;
-        font-size: 44px;
-        font-weight: 950;
-        color: #0969da;
-        margin: 8px 0 18px;
-    }
-
-    .final-scene-card {
-        background: linear-gradient(135deg, #f0fff4 0%, #ddf4ff 100%);
-        border: 1px solid #aceebb;
-        border-radius: 26px;
-        padding: 26px 28px;
-        margin-top: 20px;
-    }
-
-    .final-title {
-        font-size: 28px;
-        font-weight: 950;
-        color: #1f2328;
-        margin-bottom: 10px;
-    }
-
-    .final-desc {
-        font-size: 15px;
-        color: #57606a;
-        line-height: 1.75;
-    }
-
-    .dashboard-link-card {
-        background: #ffffff;
-        border: 1px solid #d0d7de;
-        border-radius: 22px;
-        padding: 24px 26px;
-        box-shadow: 0 10px 26px rgba(27,31,36,0.07);
-        margin-top: 18px;
-    }
-
-    .dashboard-link-title {
-        font-size: 22px;
-        font-weight: 950;
-        color: #1f2328;
-        margin-bottom: 8px;
-    }
-
-    .dashboard-link-desc {
-        font-size: 14px;
-        color: #57606a;
-        line-height: 1.75;
-        margin-bottom: 16px;
-    }
-
-    .dashboard-button {
-        display: inline-block;
-        background: #0969da;
-        color: white !important;
-        padding: 12px 18px;
-        border-radius: 14px;
-        text-decoration: none !important;
-        font-weight: 900;
-        font-size: 14px;
-        box-shadow: 0 8px 18px rgba(9,105,218,0.22);
-    }
-
-    @media (max-width: 1100px) {
-        .city-grid,
-        .effect-strip,
-        .energy-field,
-        .process-wrap {
-            grid-template-columns: 1fr;
-        }
-
-        .treatment-grid {
-            grid-template-columns: 1fr;
-        }
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
 
 # ==================================================
 # 프리셋
 # ==================================================
 PRESETS = {
     "직접 입력": None,
+
     "초기 상태 (인프라 편중)": dict(
-        welfare=15, education=15, energy_infra=10, general_infra=45, safety=15,
-        solar=10, hydrogen=5, ess=5, external=80
+        welfare=15,
+        education=15,
+        energy_infra=10,
+        general_infra=45,
+        safety=15,
+        solar=10,
+        hydrogen=5,
+        ess=5,
+        external=80,
     ),
+
     "복지 집중": dict(
-        welfare=40, education=15, energy_infra=15, general_infra=20, safety=10,
-        solar=25, hydrogen=15, ess=15, external=45
+        welfare=40,
+        education=15,
+        energy_infra=15,
+        general_infra=20,
+        safety=10,
+        solar=25,
+        hydrogen=15,
+        ess=15,
+        external=45,
     ),
+
     "에너지 자립 집중": dict(
-        welfare=12, education=10, energy_infra=45, general_infra=23, safety=10,
-        solar=45, hydrogen=30, ess=20, external=5
+        welfare=12,
+        education=10,
+        energy_infra=45,
+        general_infra=23,
+        safety=10,
+        solar=45,
+        hydrogen=30,
+        ess=20,
+        external=5,
     ),
+
     "균형 배분": dict(
-        welfare=22, education=20, energy_infra=20, general_infra=23, safety=15,
-        solar=35, hydrogen=25, ess=20, external=20
+        welfare=22,
+        education=20,
+        energy_infra=20,
+        general_infra=23,
+        safety=15,
+        solar=35,
+        hydrogen=25,
+        ess=20,
+        external=20,
     ),
+
     "선순환 최적 ⭐": dict(
-        welfare=20, education=18, energy_infra=30, general_infra=22, safety=10,
-        solar=40, hydrogen=35, ess=20, external=5
+        welfare=20,
+        education=18,
+        energy_infra=30,
+        general_infra=22,
+        safety=10,
+        solar=40,
+        hydrogen=35,
+        ess=20,
+        external=5,
     ),
 }
 
+
+DISTRICT_KEYS = [
+    "A구역(산업단지)",
+    "B구역(대학가)",
+    "C구역(복지타운)",
+    "D구역(신도시)",
+    "E구역(구도심)",
+]
+
+DISTRICT_INFO = {
+    "A구역(산업단지)": {
+        "short": "A구역",
+        "name": "산업단지",
+        "emoji": "🏭",
+        "desc": "근로자 중심 · 이동성·일자리 민감",
+        "weights": {
+            "welfare": 0.35,
+            "education": 0.25,
+            "energy_infra": 1.10,
+            "general_infra": 1.25,
+            "safety": 0.80,
+        },
+    },
+    "B구역(대학가)": {
+        "short": "B구역",
+        "name": "대학가",
+        "emoji": "🎓",
+        "desc": "학생 중심 · 교육·문화 민감",
+        "weights": {
+            "welfare": 0.30,
+            "education": 1.45,
+            "energy_infra": 0.45,
+            "general_infra": 0.80,
+            "safety": 0.55,
+        },
+    },
+    "C구역(복지타운)": {
+        "short": "C구역",
+        "name": "복지타운",
+        "emoji": "🏥",
+        "desc": "노인·취약계층 중심 · 복지·안전 민감",
+        "weights": {
+            "welfare": 1.50,
+            "education": 0.30,
+            "energy_infra": 0.45,
+            "general_infra": 0.55,
+            "safety": 0.95,
+        },
+    },
+    "D구역(신도시)": {
+        "short": "D구역",
+        "name": "신도시",
+        "emoji": "🏙️",
+        "desc": "혼합형 시민 구성 · 균형 정책 반응",
+        "weights": {
+            "welfare": 0.80,
+            "education": 0.85,
+            "energy_infra": 0.95,
+            "general_infra": 1.00,
+            "safety": 0.85,
+        },
+    },
+    "E구역(구도심)": {
+        "short": "E구역",
+        "name": "구도심",
+        "emoji": "🏚️",
+        "desc": "노후 인프라 · 복지·안전·생활SOC 민감",
+        "weights": {
+            "welfare": 1.05,
+            "education": 0.45,
+            "energy_infra": 0.45,
+            "general_infra": 0.95,
+            "safety": 1.10,
+        },
+    },
+}
+
+
 # ==================================================
-# 유틸 함수
+# 도시 모델
 # ==================================================
-def icon_count(value, max_icons=12):
-    if value <= 0:
-        return 0
-    return max(1, min(max_icons, round(value / 100 * max_icons)))
+@st.cache_resource
+def get_city():
+    if not HAS_CLASSES:
+        return None
+
+    worker = Worker()
+    student = Student()
+    caregiver = Caregiver()
+    unemployed = Unemployed()
+    elder = Elder()
+
+    districts = [
+        District(
+            "A구역(산업단지)",
+            {worker: 0.75, student: 0.05, caregiver: 0.08, unemployed: 0.07, elder: 0.05},
+            0.45
+        ),
+        District(
+            "B구역(대학가)",
+            {worker: 0.10, student: 0.70, caregiver: 0.08, unemployed: 0.07, elder: 0.05},
+            0.42
+        ),
+        District(
+            "C구역(복지타운)",
+            {worker: 0.05, student: 0.03, caregiver: 0.10, unemployed: 0.07, elder: 0.75},
+            0.55
+        ),
+        District(
+            "D구역(신도시)",
+            {worker: 0.35, student: 0.25, caregiver: 0.20, unemployed: 0.10, elder: 0.10},
+            0.40
+        ),
+        District(
+            "E구역(구도심)",
+            {worker: 0.30, student: 0.05, caregiver: 0.20, unemployed: 0.18, elder: 0.27},
+            0.30
+        ),
+    ]
+
+    return City("NOVA시", districts)
 
 
-def icons(symbol, value, max_icons=12):
-    count = icon_count(value, max_icons)
-    return "".join([f'<span class="scene-icon">{symbol}</span>' for _ in range(count)])
+def expected_energy_self_rate(solar, hydrogen, ess, external):
+    return (solar * 0.7 + hydrogen * 0.9 + ess * 0.6 + external * 0.0) / 100
 
 
-def mixed_icons(items):
-    html = ""
-    for symbol, value, max_icons in items:
-        html += icons(symbol, value, max_icons)
-    return html
+def run_model_or_fallback(
+    welfare,
+    education,
+    energy_infra,
+    general_infra,
+    safety,
+    solar,
+    hydrogen,
+    ess,
+    external,
+):
+    """
+    classes.py가 있으면 실제 OOP 모델을 사용한다.
+    오류가 나거나 classes.py가 없으면 게임 화면용 간이 점수를 사용한다.
+    """
+    if HAS_CLASSES:
+        try:
+            resource = Resource(
+                welfare=welfare / 100,
+                education=education / 100,
+                energy_infra=energy_infra / 100,
+                general_infra=general_infra / 100,
+                safety=safety / 100,
+            )
+
+            grid = EnergyGrid([
+                SolarPanel(solar / 100),
+                HydrogenCell(hydrogen / 100),
+                ESS(ess / 100),
+                ExternalGrid(external / 100),
+            ])
+
+            city = get_city()
+            result = city.apply_policy(resource, grid)
+
+            scores = {
+                key: float(result["districts"][key])
+                for key in DISTRICT_KEYS
+            }
+
+            avg = float(result["city_average"])
+            independence = float(result["independence_rate"])
+            warnings = result.get("warnings", [])
+
+            return {
+                "scores": scores,
+                "average": avg,
+                "independence": independence,
+                "warnings": warnings,
+                "source": "classes.py OOP 모델",
+            }
+
+        except Exception:
+            pass
+
+    # fallback: 화면용 간이 계산
+    energy_rate = expected_energy_self_rate(solar, hydrogen, ess, external)
+    energy_bonus = (energy_rate - 0.4) * 18
+
+    scores = {
+        "A구역(산업단지)": 42 + general_infra * 0.30 + energy_infra * 0.18 + safety * 0.15 + education * 0.08 + welfare * 0.05 + energy_bonus,
+        "B구역(대학가)": 40 + education * 0.33 + general_infra * 0.14 + safety * 0.08 + energy_infra * 0.08 + welfare * 0.05 + energy_bonus,
+        "C구역(복지타운)": 38 + welfare * 0.38 + safety * 0.18 + general_infra * 0.08 + education * 0.05 + energy_infra * 0.05 + energy_bonus,
+        "D구역(신도시)": 43 + welfare * 0.16 + education * 0.16 + energy_infra * 0.16 + general_infra * 0.18 + safety * 0.14 + energy_bonus,
+        "E구역(구도심)": 36 + welfare * 0.22 + safety * 0.22 + general_infra * 0.20 + education * 0.06 + energy_infra * 0.07 + energy_bonus,
+    }
+
+    scores = {
+        key: max(30, min(95, value))
+        for key, value in scores.items()
+    }
+
+    avg = sum(scores.values()) / len(scores)
+    warnings = [key for key, value in scores.items() if value < 50]
+
+    return {
+        "scores": scores,
+        "average": avg,
+        "independence": energy_rate,
+        "warnings": warnings,
+        "source": "화면용 간이 계산",
+    }
+
+
+# ==================================================
+# HTML 생성 유틸
+# ==================================================
+def score_face(score):
+    if score < 50:
+        return "😟"
+    if score < 60:
+        return "😐"
+    if score < 75:
+        return "🙂"
+    return "😄"
+
+
+def score_color(score):
+    if score < 50:
+        return "#cf222e"
+    if score < 60:
+        return "#9a6700"
+    if score < 75:
+        return "#0969da"
+    return "#1a7f37"
+
+
+def clamp(n, low, high):
+    return max(low, min(high, n))
+
+
+def icon_count(value, weight=1.0, max_icons=7):
+    count = round((value * weight) / 12)
+    return clamp(count, 0, max_icons)
+
+
+def make_icon_spans(symbols, count, base_delay=1.0):
+    if count <= 0:
+        return ""
+
+    result = []
+    symbol_cycle = cycle(symbols)
+
+    for i in range(count):
+        symbol = next(symbol_cycle)
+        delay = base_delay + i * 0.13
+        result.append(
+            f'<span class="facility" style="animation-delay:{delay:.2f}s">{symbol}</span>'
+        )
+
+    return "".join(result)
+
+
+def make_people(score, district_index):
+    face = score_face(score)
+    people = []
+
+    for i in range(5):
+        delay = 7.8 + district_index * 0.25 + i * 0.15
+        top = 64 + (i % 2) * 18
+        left = 8 + i * 17
+
+        people.append(
+            f"""
+            <span class="citizen"
+                  style="left:{left}%; top:{top}%; animation-delay:{delay:.2f}s">
+                {face}
+            </span>
+            """
+        )
+
+    return "".join(people)
+
+
+def district_facilities(
+    district_key,
+    welfare,
+    education,
+    energy_infra,
+    general_infra,
+    safety,
+    district_index,
+):
+    weights = DISTRICT_INFO[district_key]["weights"]
+
+    welfare_icons = make_icon_spans(
+        ["🏥", "👩‍⚕️", "🏘️"],
+        icon_count(welfare, weights["welfare"], 7),
+        1.8 + district_index * 0.1,
+    )
+
+    education_icons = make_icon_spans(
+        ["🏫", "📚", "🎓"],
+        icon_count(education, weights["education"], 7),
+        2.5 + district_index * 0.1,
+    )
+
+    energy_icons = make_icon_spans(
+        ["🔌", "📡", "🚗"],
+        icon_count(energy_infra, weights["energy_infra"], 7),
+        3.2 + district_index * 0.1,
+    )
+
+    infra_icons = make_icon_spans(
+        ["🚌", "🛣️", "🌳"],
+        icon_count(general_infra, weights["general_infra"], 7),
+        3.9 + district_index * 0.1,
+    )
+
+    safety_icons = make_icon_spans(
+        ["👮", "🚓", "📹", "🚒"],
+        icon_count(safety, weights["safety"], 7),
+        4.6 + district_index * 0.1,
+    )
+
+    return welfare_icons + education_icons + energy_icons + infra_icons + safety_icons
+
+
+def energy_facilities(solar, hydrogen, ess, external):
+    solar_html = make_icon_spans(["☀️", "🔆", "🏠"], icon_count(solar, 1.2, 9), 5.0)
+    hydrogen_html = make_icon_spans(["💧", "⚗️", "🏭"], icon_count(hydrogen, 1.2, 9), 5.4)
+    ess_html = make_icon_spans(["🔋", "⚡"], icon_count(ess, 1.2, 9), 5.8)
+    external_html = make_icon_spans(["🗼", "🔌"], icon_count(external, 1.0, 9), 6.2)
+
+    return solar_html, hydrogen_html, ess_html, external_html
 
 
 def build_query_string(
@@ -534,7 +461,7 @@ def build_query_string(
     solar,
     hydrogen,
     ess,
-    external
+    external,
 ):
     params = {
         "preset": preset_choice,
@@ -558,247 +485,7 @@ def get_dashboard_url_from_secrets():
         return ""
 
 
-# ==================================================
-# 화면 조각 함수
-# ==================================================
-def show_process_map(active_step):
-    steps = [
-        (1, "🎛️", "정책 투입", "예산·에너지 배분 선택"),
-        (2, "🏗️", "도시 시설 변화", "학교·병원·경찰·도로 증가"),
-        (3, "⚡", "에너지 설비 변화", "태양광·수소·ESS 설비 배치"),
-        (4, "🌆", "도시 장면 완성", "처치가 적용된 도시 모습"),
-        (5, "📊", "상세 분석 이동", "2차 대시보드에서 결과 확인"),
-    ]
-
-    html = '<div class="process-wrap">'
-    for num, icon, title, desc in steps:
-        active_class = " active" if num == active_step else ""
-        html += f"""
-        <div class="process-step{active_class}">
-            <div class="process-icon">{icon}</div>
-            <div class="process-title">{num}. {title}</div>
-            <div class="process-desc">{desc}</div>
-        </div>
-        """
-    html += "</div>"
-    st.markdown(html, unsafe_allow_html=True)
-
-
-def show_budget_treatment_cards(welfare, education, energy_infra, general_infra, safety):
-    st.markdown(
-        f"""
-        <div class="treatment-grid">
-            <div class="treatment-card">
-                <div class="big-icon">🏥</div>
-                <div class="label">복지 예산</div>
-                <div class="value">{welfare}%</div>
-                <div class="explain">병원, 복지관, 돌봄센터가 늘어납니다.</div>
-            </div>
-            <div class="treatment-card">
-                <div class="big-icon">🏫</div>
-                <div class="label">교육 예산</div>
-                <div class="value">{education}%</div>
-                <div class="explain">학교, 학원, 도서관, 청년 교육 공간이 생깁니다.</div>
-            </div>
-            <div class="treatment-card">
-                <div class="big-icon">🔌</div>
-                <div class="label">에너지 인프라</div>
-                <div class="value">{energy_infra}%</div>
-                <div class="explain">충전소, 스마트그리드, 에너지 관리 시설이 늘어납니다.</div>
-            </div>
-            <div class="treatment-card">
-                <div class="big-icon">🚌</div>
-                <div class="label">일반 인프라</div>
-                <div class="value">{general_infra}%</div>
-                <div class="explain">도로, 버스, 공원, 생활SOC가 확충됩니다.</div>
-            </div>
-            <div class="treatment-card">
-                <div class="big-icon">👮</div>
-                <div class="label">안전 예산</div>
-                <div class="value">{safety}%</div>
-                <div class="explain">경찰, CCTV, 소방, 재난 대응 체계가 강화됩니다.</div>
-            </div>
-            <div class="treatment-card">
-                <div class="big-icon">🎯</div>
-                <div class="label">처치 방식</div>
-                <div class="value">100%</div>
-                <div class="explain">정해진 예산을 어디에 배분하느냐가 도시 장면을 바꿉니다.</div>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-
-def show_city_scene(welfare, education, energy_infra, general_infra, safety, stage="budget"):
-    welfare_icons = mixed_icons([
-        ("🏥", welfare, 5),
-        ("👩‍⚕️", welfare, 4),
-        ("🏘️", welfare, 3),
-    ])
-
-    education_icons = mixed_icons([
-        ("🏫", education, 5),
-        ("📚", education, 4),
-        ("🎓", education, 3),
-    ])
-
-    energy_icons = mixed_icons([
-        ("🔌", energy_infra, 5),
-        ("🚗", energy_infra, 3),
-        ("📡", energy_infra, 4),
-    ])
-
-    infra_icons = mixed_icons([
-        ("🚌", general_infra, 4),
-        ("🛣️", general_infra, 4),
-        ("🌳", general_infra, 4),
-    ])
-
-    safety_icons = mixed_icons([
-        ("👮", safety, 4),
-        ("🚓", safety, 3),
-        ("📹", safety, 3),
-        ("🚒", safety, 2),
-    ])
-
-    st.markdown(
-        f"""
-        <div class="city-scene">
-            <div class="city-sky">
-                <div class="city-title">🏙️ NOVA시 정책 처치 적용 장면</div>
-                <div class="city-weather">☀️ ☁️</div>
-            </div>
-
-            <div class="city-grid">
-                <div class="district-zone">
-                    <div class="district-name">복지 구역</div>
-                    <div class="district-sub">복지 예산이 늘어나면 의료·돌봄 시설이 확충됩니다.</div>
-                    <div class="icon-field">{welfare_icons}</div>
-                </div>
-
-                <div class="district-zone">
-                    <div class="district-name">교육 구역</div>
-                    <div class="district-sub">교육 예산이 늘어나면 학교·도서관·학습공간이 늘어납니다.</div>
-                    <div class="icon-field">{education_icons}</div>
-                </div>
-
-                <div class="district-zone">
-                    <div class="district-name">에너지 인프라 구역</div>
-                    <div class="district-sub">에너지 인프라 예산은 충전소·스마트그리드로 표현됩니다.</div>
-                    <div class="icon-field">{energy_icons}</div>
-                </div>
-
-                <div class="district-zone">
-                    <div class="district-name">생활 인프라 구역</div>
-                    <div class="district-sub">일반 인프라는 도로·버스·공원·생활SOC로 나타납니다.</div>
-                    <div class="icon-field">{infra_icons}</div>
-                </div>
-
-                <div class="district-zone">
-                    <div class="district-name">안전 구역</div>
-                    <div class="district-sub">안전 예산은 경찰·CCTV·소방 체계 강화로 나타납니다.</div>
-                    <div class="icon-field">{safety_icons}</div>
-                </div>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-
-def show_energy_scene(solar, hydrogen, ess, external):
-    solar_icons = mixed_icons([
-        ("☀️", solar, 4),
-        ("🔆", solar, 4),
-        ("🏠", solar, 4),
-    ])
-
-    hydrogen_icons = mixed_icons([
-        ("💧", hydrogen, 4),
-        ("⚗️", hydrogen, 4),
-        ("🏭", hydrogen, 4),
-    ])
-
-    ess_icons = mixed_icons([
-        ("🔋", ess, 7),
-        ("⚡", ess, 5),
-    ])
-
-    external_icons = mixed_icons([
-        ("🗼", external, 5),
-        ("🔌", external, 4),
-        ("🏭", external, 3),
-    ])
-
-    st.markdown(
-        f"""
-        <div class="energy-field">
-            <div class="energy-zone">
-                <div class="energy-title">태양광 설비</div>
-                <div class="energy-desc">태양광 비중이 커질수록 지붕형 패널과 태양광 발전 시설이 늘어납니다.</div>
-                <div class="energy-icons">{solar_icons}</div>
-            </div>
-
-            <div class="energy-zone">
-                <div class="energy-title">수소연료전지</div>
-                <div class="energy-desc">수소 비중이 커질수록 안정적인 도시 에너지 생산 시설이 늘어납니다.</div>
-                <div class="energy-icons">{hydrogen_icons}</div>
-            </div>
-
-            <div class="energy-zone">
-                <div class="energy-title">ESS 저장 시설</div>
-                <div class="energy-desc">ESS 비중이 커질수록 남는 에너지를 저장하는 배터리 시설이 늘어납니다.</div>
-                <div class="energy-icons">{ess_icons}</div>
-            </div>
-
-            <div class="energy-zone">
-                <div class="energy-title">외부전력망</div>
-                <div class="energy-desc">외부전력망 비중이 커질수록 도시 밖 전력망에 대한 의존이 커집니다.</div>
-                <div class="energy-icons">{external_icons}</div>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-
-def show_effect_strip():
-    st.markdown(
-        """
-        <div class="effect-strip">
-            <div class="effect-item">
-                <div class="effect-icon">🏥</div>
-                <div class="effect-title">복지 처치</div>
-                <div class="effect-desc">의료·돌봄·복지시설 확충</div>
-            </div>
-            <div class="effect-item">
-                <div class="effect-icon">🏫</div>
-                <div class="effect-title">교육 처치</div>
-                <div class="effect-desc">학교·도서관·학습공간 증가</div>
-            </div>
-            <div class="effect-item">
-                <div class="effect-icon">👮</div>
-                <div class="effect-title">안전 처치</div>
-                <div class="effect-desc">경찰·CCTV·소방 강화</div>
-            </div>
-            <div class="effect-item">
-                <div class="effect-icon">🚌</div>
-                <div class="effect-title">인프라 처치</div>
-                <div class="effect-desc">도로·버스·공원 확충</div>
-            </div>
-            <div class="effect-item">
-                <div class="effect-icon">⚡</div>
-                <div class="effect-title">에너지 처치</div>
-                <div class="effect-desc">충전소·발전·저장 설비 확대</div>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-
-def show_dashboard_connection_card(
+def make_dashboard_link(
     dashboard_url,
     preset_choice,
     welfare,
@@ -809,8 +496,11 @@ def show_dashboard_connection_card(
     solar,
     hydrogen,
     ess,
-    external
+    external,
 ):
+    if not dashboard_url:
+        return ""
+
     query = build_query_string(
         preset_choice,
         welfare,
@@ -821,51 +511,837 @@ def show_dashboard_connection_card(
         solar,
         hydrogen,
         ess,
-        external
+        external,
     )
 
-    if dashboard_url:
-        separator = "&" if "?" in dashboard_url else "?"
-        linked_url = f"{dashboard_url}{separator}{query}"
+    separator = "&" if "?" in dashboard_url else "?"
+    linked = f"{dashboard_url}{separator}{query}"
+    escaped = html_lib.escape(linked, quote=True)
 
-        st.markdown(
+    return f"""
+    <a class="dashboard-button" href="{escaped}" target="_blank">
+        2차 상세 대시보드 열기 →
+    </a>
+    """
+
+
+def make_game_html(
+    preset_choice,
+    welfare,
+    education,
+    energy_infra,
+    general_infra,
+    safety,
+    solar,
+    hydrogen,
+    ess,
+    external,
+    model_result,
+    dashboard_url,
+):
+    scores = model_result["scores"]
+    avg = model_result["average"]
+    independence = model_result["independence"]
+    warnings = model_result["warnings"]
+    model_source = model_result["source"]
+
+    solar_html, hydrogen_html, ess_html, external_html = energy_facilities(
+        solar, hydrogen, ess, external
+    )
+
+    district_cards = []
+
+    for idx, district_key in enumerate(DISTRICT_KEYS):
+        info = DISTRICT_INFO[district_key]
+        score = scores[district_key]
+        color = score_color(score)
+        face = score_face(score)
+
+        facilities = district_facilities(
+            district_key,
+            welfare,
+            education,
+            energy_infra,
+            general_infra,
+            safety,
+            idx,
+        )
+
+        people = make_people(score, idx)
+
+        district_cards.append(
             f"""
-            <div class="dashboard-link-card">
-                <div class="dashboard-link-title">📊 2차 결과물: 상세 대시보드로 이동</div>
-                <div class="dashboard-link-desc">
-                    이 화면은 정책 처치가 도시 장면에 적용되는 과정을 보여주는 1차 시뮬레이션입니다.
-                    구체적인 만족도, 자립률, 구역별 차이, 시나리오 비교는 2차 대시보드에서 확인합니다.
+            <div class="district district-{idx + 1}">
+                <div class="district-top">
+                    <div class="district-emoji">{info["emoji"]}</div>
+                    <div>
+                        <div class="district-title">{info["short"]} · {info["name"]}</div>
+                        <div class="district-desc">{info["desc"]}</div>
+                    </div>
                 </div>
-                <a class="dashboard-button" href="{linked_url}" target="_blank">
-                    상세 대시보드 열기 →
-                </a>
+
+                <div class="building-zone">
+                    {facilities}
+                    {people}
+                    <div class="road-line"></div>
+                </div>
+
+                <div class="score-panel">
+                    <div class="score-face">{face}</div>
+                    <div class="score-content">
+                        <div class="score-label">시민 만족도 변화</div>
+                        <div class="score-bar">
+                            <div class="score-fill"
+                                 style="--score-width:{score:.1f}%; --score-color:{color};">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="score-value" style="color:{color};">{score:.1f}</div>
+                </div>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
-    else:
-        st.markdown(
             """
-            <div class="dashboard-link-card">
-                <div class="dashboard-link-title">📊 다음 단계: 2차 대시보드 확인</div>
-                <div class="dashboard-link-desc">
-                    이 시뮬레이션은 결과값을 자세히 분석하지 않고, 정책 처치가 도시 장면에 적용되는 과정만 보여줍니다.
-                    발표에서는 이 장면형 시뮬레이션을 먼저 보여준 뒤, 기존 대시보드에서 최종 결과값을 설명하면 됩니다.
-                    Streamlit Cloud에 배포한 대시보드 URL이 있다면 왼쪽 사이드바의
-                    <b>2차 대시보드 URL</b>에 입력하세요.
+        )
+
+    dashboard_button = make_dashboard_link(
+        dashboard_url,
+        preset_choice,
+        welfare,
+        education,
+        energy_infra,
+        general_infra,
+        safety,
+        solar,
+        hydrogen,
+        ess,
+        external,
+    )
+
+    if dashboard_button:
+        dashboard_html = dashboard_button
+    else:
+        dashboard_html = """
+        <div class="dashboard-empty">
+            2차 대시보드 URL을 왼쪽 사이드바에 입력하면 여기에서 바로 이동할 수 있습니다.
+        </div>
+        """
+
+    warning_text = (
+        f"{len(warnings)}개 구역 주의 필요"
+        if warnings
+        else "위험 구역 없음"
+    )
+
+    css = """
+    <style>
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        background: #ffffff;
+        font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #1f2328;
+    }
+
+    .game-root {
+        padding: 10px 8px 26px;
+    }
+
+    .game-hero {
+        position: relative;
+        overflow: hidden;
+        border-radius: 28px;
+        padding: 34px 38px;
+        color: white;
+        background:
+            radial-gradient(circle at 8% 20%, rgba(255,255,255,0.20), transparent 24%),
+            radial-gradient(circle at 88% 18%, rgba(255,255,255,0.16), transparent 26%),
+            linear-gradient(135deg, #0969da 0%, #8250df 100%);
+        box-shadow: 0 18px 42px rgba(9,105,218,0.22);
+        margin-bottom: 24px;
+    }
+
+    .game-hero::after {
+        content: "☁️";
+        position: absolute;
+        font-size: 72px;
+        right: 40px;
+        top: 18px;
+        opacity: 0.22;
+        animation: cloudFloat 5s ease-in-out infinite alternate;
+    }
+
+    @keyframes cloudFloat {
+        from { transform: translateX(0); }
+        to { transform: translateX(-28px); }
+    }
+
+    .eyebrow {
+        font-size: 13px;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        font-weight: 900;
+        opacity: 0.9;
+        margin-bottom: 10px;
+    }
+
+    .hero-title {
+        font-size: 38px;
+        font-weight: 950;
+        line-height: 1.2;
+        margin-bottom: 12px;
+    }
+
+    .hero-desc {
+        font-size: 16px;
+        line-height: 1.75;
+        opacity: 0.96;
+        max-width: 980px;
+    }
+
+    .hud {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr 1fr 1fr;
+        gap: 14px;
+        margin-bottom: 20px;
+    }
+
+    .hud-card {
+        background: #ffffff;
+        border: 1px solid #d0d7de;
+        border-radius: 20px;
+        padding: 18px 20px;
+        box-shadow: 0 10px 26px rgba(27,31,36,0.07);
+        min-height: 112px;
+        animation: fadeUp 0.8s ease both;
+    }
+
+    .hud-label {
+        font-size: 12px;
+        color: #656d76;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+    }
+
+    .hud-value {
+        font-size: 28px;
+        font-weight: 950;
+        color: #0969da;
+        line-height: 1.1;
+    }
+
+    .hud-sub {
+        margin-top: 8px;
+        font-size: 13px;
+        color: #57606a;
+        line-height: 1.5;
+    }
+
+    .timeline {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 12px;
+        margin-bottom: 22px;
+    }
+
+    .timeline-step {
+        background: #f6f8fa;
+        border: 1px solid #d0d7de;
+        border-radius: 18px;
+        padding: 14px 12px;
+        text-align: center;
+        min-height: 120px;
+        animation: stepPulse 8s ease both;
+    }
+
+    .timeline-step:nth-child(1) { animation-delay: 0.2s; }
+    .timeline-step:nth-child(2) { animation-delay: 1.6s; }
+    .timeline-step:nth-child(3) { animation-delay: 3.0s; }
+    .timeline-step:nth-child(4) { animation-delay: 4.4s; }
+    .timeline-step:nth-child(5) { animation-delay: 5.8s; }
+
+    @keyframes stepPulse {
+        0%, 12% {
+            transform: translateY(0);
+            background: linear-gradient(135deg, #ddf4ff, #ffffff);
+            border-color: #0969da;
+            box-shadow: 0 10px 26px rgba(9,105,218,0.16);
+        }
+        22%, 100% {
+            transform: translateY(0);
+            background: #f6f8fa;
+            border-color: #d0d7de;
+            box-shadow: none;
+        }
+    }
+
+    .timeline-icon {
+        font-size: 28px;
+        margin-bottom: 7px;
+    }
+
+    .timeline-title {
+        font-size: 14px;
+        font-weight: 950;
+        color: #1f2328;
+        margin-bottom: 5px;
+    }
+
+    .timeline-desc {
+        font-size: 12px;
+        color: #57606a;
+        line-height: 1.45;
+    }
+
+    .city-stage {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid #d0d7de;
+        border-radius: 30px;
+        background:
+            linear-gradient(180deg, #ddf4ff 0%, #f6fbff 38%, #f0fff4 100%);
+        padding: 22px;
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.7),
+                    0 14px 34px rgba(27,31,36,0.08);
+        margin-bottom: 24px;
+    }
+
+    .city-stage::before {
+        content: "☀️";
+        position: absolute;
+        top: 22px;
+        right: 34px;
+        font-size: 50px;
+        animation: sunSpin 10s linear infinite;
+    }
+
+    @keyframes sunSpin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    .stage-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 18px;
+        padding-right: 80px;
+    }
+
+    .stage-title {
+        font-size: 26px;
+        font-weight: 950;
+        color: #1f2328;
+        margin-bottom: 6px;
+    }
+
+    .stage-desc {
+        font-size: 14px;
+        color: #57606a;
+        line-height: 1.65;
+    }
+
+    .city-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 14px;
+    }
+
+    .district {
+        position: relative;
+        background: rgba(255,255,255,0.92);
+        border: 1px solid #d0d7de;
+        border-radius: 24px;
+        padding: 16px 14px;
+        min-height: 390px;
+        box-shadow: 0 10px 24px rgba(27,31,36,0.07);
+        overflow: hidden;
+        animation: fadeUp 0.7s ease both;
+    }
+
+    .district-1 { animation-delay: 0.4s; }
+    .district-2 { animation-delay: 0.6s; }
+    .district-3 { animation-delay: 0.8s; }
+    .district-4 { animation-delay: 1.0s; }
+    .district-5 { animation-delay: 1.2s; }
+
+    @keyframes fadeUp {
+        from { transform: translateY(18px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    .district-top {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 12px;
+    }
+
+    .district-emoji {
+        width: 46px;
+        height: 46px;
+        border-radius: 16px;
+        background: #f6f8fa;
+        border: 1px solid #d0d7de;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 25px;
+        flex: 0 0 auto;
+    }
+
+    .district-title {
+        font-size: 15px;
+        font-weight: 950;
+        color: #1f2328;
+        margin-bottom: 3px;
+    }
+
+    .district-desc {
+        font-size: 11px;
+        color: #57606a;
+        line-height: 1.35;
+    }
+
+    .building-zone {
+        position: relative;
+        background:
+            linear-gradient(180deg, rgba(221,244,255,0.55) 0%, rgba(246,248,250,0.9) 70%),
+            repeating-linear-gradient(90deg, transparent 0 22px, rgba(208,215,222,0.35) 22px 23px);
+        border: 1px dashed #d0d7de;
+        border-radius: 18px;
+        padding: 12px;
+        min-height: 210px;
+        display: flex;
+        flex-wrap: wrap;
+        align-content: flex-start;
+        justify-content: center;
+        gap: 8px;
+        overflow: hidden;
+        margin-bottom: 14px;
+    }
+
+    .building-zone::after {
+        content: "";
+        position: absolute;
+        bottom: 20px;
+        left: 0;
+        width: 100%;
+        height: 28px;
+        background: #8c959f;
+        opacity: 0.22;
+    }
+
+    .road-line {
+        position: absolute;
+        bottom: 32px;
+        left: 0;
+        width: 200%;
+        height: 2px;
+        border-top: 2px dashed #ffffff;
+        opacity: 0.9;
+        animation: roadMove 2.8s linear infinite;
+    }
+
+    @keyframes roadMove {
+        from { transform: translateX(0); }
+        to { transform: translateX(-80px); }
+    }
+
+    .facility {
+        position: relative;
+        z-index: 2;
+        display: inline-block;
+        font-size: 27px;
+        opacity: 0;
+        transform: scale(0.3) translateY(18px);
+        animation: facilityPop 0.55s cubic-bezier(.2,.8,.2,1.25) forwards;
+    }
+
+    @keyframes facilityPop {
+        to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+    }
+
+    .citizen {
+        position: absolute;
+        z-index: 4;
+        font-size: 22px;
+        opacity: 0;
+        animation: citizenEnter 0.65s ease forwards,
+                   citizenWalk 3.2s ease-in-out infinite alternate;
+    }
+
+    @keyframes citizenEnter {
+        from { opacity: 0; transform: translateY(12px) scale(0.6); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes citizenWalk {
+        from { margin-left: -5px; }
+        to { margin-left: 9px; }
+    }
+
+    .score-panel {
+        display: grid;
+        grid-template-columns: 34px 1fr 46px;
+        gap: 10px;
+        align-items: center;
+        background: #f6f8fa;
+        border: 1px solid #d0d7de;
+        border-radius: 16px;
+        padding: 12px;
+    }
+
+    .score-face {
+        font-size: 25px;
+    }
+
+    .score-label {
+        font-size: 11px;
+        font-weight: 900;
+        color: #57606a;
+        margin-bottom: 6px;
+    }
+
+    .score-bar {
+        height: 10px;
+        background: #d0d7de;
+        border-radius: 999px;
+        overflow: hidden;
+    }
+
+    .score-fill {
+        height: 100%;
+        width: 0;
+        background: var(--score-color);
+        border-radius: 999px;
+        animation: scoreFill 1.2s ease forwards;
+        animation-delay: 8.3s;
+    }
+
+    @keyframes scoreFill {
+        to { width: var(--score-width); }
+    }
+
+    .score-value {
+        font-size: 16px;
+        font-weight: 950;
+        text-align: right;
+    }
+
+    .energy-stage {
+        background: #ffffff;
+        border: 1px solid #d0d7de;
+        border-radius: 28px;
+        padding: 24px;
+        box-shadow: 0 12px 30px rgba(27,31,36,0.07);
+        margin-bottom: 24px;
+    }
+
+    .energy-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+    }
+
+    .energy-card {
+        background: #f6f8fa;
+        border: 1px solid #d0d7de;
+        border-radius: 22px;
+        padding: 16px;
+        min-height: 210px;
+        text-align: center;
+        overflow: hidden;
+    }
+
+    .energy-title {
+        font-size: 15px;
+        font-weight: 950;
+        color: #1f2328;
+        margin-bottom: 6px;
+    }
+
+    .energy-desc {
+        font-size: 12px;
+        color: #57606a;
+        line-height: 1.45;
+        margin-bottom: 12px;
+    }
+
+    .energy-icons {
+        background: #ffffff;
+        border: 1px dashed #d0d7de;
+        border-radius: 16px;
+        padding: 12px;
+        min-height: 112px;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-content: flex-start;
+        gap: 8px;
+    }
+
+    .bridge {
+        display: grid;
+        grid-template-columns: 1fr 60px 1fr;
+        gap: 14px;
+        align-items: center;
+        margin-bottom: 24px;
+    }
+
+    .bridge-card {
+        background: #ffffff;
+        border: 1px solid #d0d7de;
+        border-radius: 24px;
+        padding: 22px;
+        box-shadow: 0 10px 26px rgba(27,31,36,0.07);
+        min-height: 150px;
+    }
+
+    .bridge-title {
+        font-size: 21px;
+        font-weight: 950;
+        color: #1f2328;
+        margin-bottom: 8px;
+    }
+
+    .bridge-desc {
+        font-size: 14px;
+        color: #57606a;
+        line-height: 1.7;
+    }
+
+    .bridge-arrow {
+        text-align: center;
+        font-size: 42px;
+        color: #0969da;
+        font-weight: 950;
+        animation: arrowNudge 1s ease-in-out infinite alternate;
+    }
+
+    @keyframes arrowNudge {
+        from { transform: translateX(0); }
+        to { transform: translateX(8px); }
+    }
+
+    .final-panel {
+        background: linear-gradient(135deg, #f0fff4 0%, #ddf4ff 100%);
+        border: 1px solid #aceebb;
+        border-radius: 28px;
+        padding: 26px 28px;
+        box-shadow: 0 12px 28px rgba(27,31,36,0.06);
+    }
+
+    .final-title {
+        font-size: 27px;
+        font-weight: 950;
+        color: #1f2328;
+        margin-bottom: 10px;
+    }
+
+    .final-desc {
+        font-size: 15px;
+        color: #57606a;
+        line-height: 1.75;
+        margin-bottom: 16px;
+    }
+
+    .dashboard-button {
+        display: inline-block;
+        background: #0969da;
+        color: white !important;
+        text-decoration: none !important;
+        padding: 13px 18px;
+        border-radius: 15px;
+        font-size: 14px;
+        font-weight: 950;
+        box-shadow: 0 8px 18px rgba(9,105,218,0.22);
+    }
+
+    .dashboard-empty {
+        background: rgba(255,255,255,0.74);
+        border: 1px solid #d0d7de;
+        border-radius: 16px;
+        padding: 14px 16px;
+        font-size: 13px;
+        color: #57606a;
+        display: inline-block;
+    }
+
+    @media (max-width: 1100px) {
+        .hud,
+        .timeline,
+        .city-grid,
+        .energy-grid,
+        .bridge {
+            grid-template-columns: 1fr;
+        }
+
+        .bridge-arrow {
+            transform: rotate(90deg);
+        }
+    }
+    </style>
+    """
+
+    body = f"""
+    <div class="game-root">
+        <section class="game-hero">
+            <div class="eyebrow">NOVA Smart City Game Simulation</div>
+            <div class="hero-title">예산과 에너지 처치가<br>도시를 바꾸는 장면</div>
+            <div class="hero-desc">
+                왼쪽에서 설정한 비율에 따라 A구역부터 E구역까지 도시 시설이 다르게 생겨납니다.
+                복지 예산은 병원과 돌봄 시설로, 교육 예산은 학교와 도서관으로,
+                안전 예산은 경찰과 CCTV로, 에너지 예산은 충전소와 스마트그리드로 표현됩니다.
+            </div>
+        </section>
+
+        <section class="hud">
+            <div class="hud-card">
+                <div class="hud-label">현재 프리셋</div>
+                <div class="hud-value" style="font-size:24px;">{html_lib.escape(preset_choice)}</div>
+                <div class="hud-sub">선택한 정책 조합이 도시 장면에 적용됩니다.</div>
+            </div>
+            <div class="hud-card">
+                <div class="hud-label">도시 평균 만족도</div>
+                <div class="hud-value">{avg:.1f}점</div>
+                <div class="hud-sub">자세한 원인은 2차 대시보드에서 분석합니다.</div>
+            </div>
+            <div class="hud-card">
+                <div class="hud-label">에너지 자립률</div>
+                <div class="hud-value">{independence * 100:.1f}%</div>
+                <div class="hud-sub">태양광·수소·ESS 설비의 종합 효과입니다.</div>
+            </div>
+            <div class="hud-card">
+                <div class="hud-label">주의 상태</div>
+                <div class="hud-value" style="color:{'#cf222e' if warnings else '#1a7f37'};">{warning_text}</div>
+                <div class="hud-sub">계산 기준: {html_lib.escape(model_source)}</div>
+            </div>
+        </section>
+
+        <section class="timeline">
+            <div class="timeline-step">
+                <div class="timeline-icon">🎛️</div>
+                <div class="timeline-title">1. 정책 투입</div>
+                <div class="timeline-desc">예산·에너지 배분 선택</div>
+            </div>
+            <div class="timeline-step">
+                <div class="timeline-icon">🏗️</div>
+                <div class="timeline-title">2. 시설 생성</div>
+                <div class="timeline-desc">학교·병원·경찰·도로 증가</div>
+            </div>
+            <div class="timeline-step">
+                <div class="timeline-icon">⚡</div>
+                <div class="timeline-title">3. 에너지 설비</div>
+                <div class="timeline-desc">태양광·수소·ESS 배치</div>
+            </div>
+            <div class="timeline-step">
+                <div class="timeline-icon">😊</div>
+                <div class="timeline-title">4. 시민 반응</div>
+                <div class="timeline-desc">구역별 만족도 변화</div>
+            </div>
+            <div class="timeline-step">
+                <div class="timeline-icon">📊</div>
+                <div class="timeline-title">5. 상세 분석</div>
+                <div class="timeline-desc">2차 대시보드에서 확인</div>
+            </div>
+        </section>
+
+        <section class="bridge">
+            <div class="bridge-card">
+                <div class="bridge-title">🎛️ 정책 처치</div>
+                <div class="bridge-desc">
+                    복지 {welfare}% · 교육 {education}% · 에너지 인프라 {energy_infra}% ·
+                    일반 인프라 {general_infra}% · 안전 {safety}%<br>
+                    태양광 {solar}% · 수소 {hydrogen}% · ESS {ess}% · 외부전력망 {external}%
                 </div>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+            <div class="bridge-arrow">→</div>
+            <div class="bridge-card">
+                <div class="bridge-title">🏙️ 도시 구조 변화</div>
+                <div class="bridge-desc">
+                    배분값이 클수록 해당 시설 아이콘이 더 많이 생성됩니다.
+                    이 화면은 “왜 점수가 그렇게 나왔는가”를 설명하기 전,
+                    처치가 도시 장면으로 바뀌는 과정을 보여줍니다.
+                </div>
+            </div>
+        </section>
+
+        <section class="city-stage">
+            <div class="stage-header">
+                <div>
+                    <div class="stage-title">A~E구역 도시 변화 맵</div>
+                    <div class="stage-desc">
+                        각 구역의 성격에 따라 같은 예산도 다르게 표현됩니다.
+                        예를 들어 대학가는 교육 예산에 민감하고, 복지타운은 복지·안전 예산에 민감합니다.
+                    </div>
+                </div>
+            </div>
+
+            <div class="city-grid">
+                {''.join(district_cards)}
+            </div>
+        </section>
+
+        <section class="energy-stage">
+            <div class="stage-title">에너지 설비 변화</div>
+            <div class="stage-desc">
+                에너지 배분은 도시 외곽의 발전·저장 설비로 표현됩니다.
+                태양광, 수소연료전지, ESS가 늘어날수록 외부 전력망 의존을 낮추는 방향으로 작동합니다.
+            </div>
+
+            <div class="energy-grid">
+                <div class="energy-card">
+                    <div class="energy-title">태양광 구역</div>
+                    <div class="energy-desc">지붕형 태양광과 태양광 패널이 늘어납니다.</div>
+                    <div class="energy-icons">{solar_html}</div>
+                </div>
+                <div class="energy-card">
+                    <div class="energy-title">수소연료전지 구역</div>
+                    <div class="energy-desc">안정적인 도시 전력 생산 설비가 늘어납니다.</div>
+                    <div class="energy-icons">{hydrogen_html}</div>
+                </div>
+                <div class="energy-card">
+                    <div class="energy-title">ESS 저장 구역</div>
+                    <div class="energy-desc">남는 전기를 저장하는 배터리 시설이 늘어납니다.</div>
+                    <div class="energy-icons">{ess_html}</div>
+                </div>
+                <div class="energy-card">
+                    <div class="energy-title">외부전력망 의존</div>
+                    <div class="energy-desc">도시 바깥의 전력망에 의존하는 구조입니다.</div>
+                    <div class="energy-icons">{external_html}</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="final-panel">
+            <div class="final-title">🎮 1차 게임형 시뮬레이션 완료</div>
+            <div class="final-desc">
+                이 화면은 정책 처치가 도시 안에서 어떤 시설과 장면으로 나타나는지를 보여주는 1차 시뮬레이션입니다.
+                이제 같은 입력값을 바탕으로 2차 대시보드에서 구역별 만족도, 에너지 자립률,
+                시나리오 비교와 시스템 분석을 확인하면 됩니다.
+            </div>
+            {dashboard_html}
+        </section>
+    </div>
+    """
+
+    return css + body
 
 
 # ==================================================
-# 사이드바 입력
+# 사이드바
 # ==================================================
 with st.sidebar:
-    st.markdown("## 🎛️ 정책 처치 설정")
-    st.caption("이번 화면은 결과값 계산보다 정책 처치가 도시 장면에 적용되는 모습을 보여주는 시뮬레이션입니다.")
+    st.markdown("## 🎮 게임형 정책 처치 설정")
+    st.caption("이 화면은 결과 분석보다, 정책이 도시 장면을 어떻게 바꾸는지 보여주는 1차 시뮬레이션입니다.")
 
     preset_choice = st.selectbox("프리셋 시나리오", list(PRESETS.keys()))
     preset = PRESETS[preset_choice]
@@ -915,77 +1391,94 @@ with st.sidebar:
         st.error(f"에너지 합계: {energy_total}% · 정확히 100% 필요")
 
     st.markdown("---")
-
-    speed = st.slider("장면 전환 속도", 0.2, 2.0, 0.9, 0.1)
-
     default_dashboard_url = get_dashboard_url_from_secrets()
     dashboard_url = st.text_input(
         "2차 대시보드 URL",
         value=default_dashboard_url,
-        placeholder="예: https://your-dashboard.streamlit.app"
+        placeholder="예: https://your-dashboard.streamlit.app",
     )
-    st.caption("상세 결과 대시보드를 별도 앱으로 배포했다면 그 URL을 입력하세요.")
+    st.caption("기존 dashboard.py를 별도 앱으로 배포했다면 그 URL을 입력하세요.")
 
-    play = st.button("🎬 정책 처치 장면 재생", type="primary", use_container_width=True)
+    play = st.button("▶ 도시 변화 시뮬레이션 재생", type="primary", use_container_width=True)
+
 
 # ==================================================
 # 메인 화면
 # ==================================================
 st.markdown(
     """
-    <div class="hero">
-        <div class="eyebrow">NOVA Smart City Visual Simulation</div>
-        <div class="title">정책 처치가 도시를 바꾸는 장면</div>
-        <div class="subtitle">
-            이 화면은 최종 점수와 분석표를 보여주는 대시보드가 아니라,
-            예산과 에너지 배분이라는 처치가 도시 안에 어떤 시설과 장면으로 나타나는지를
-            그림 중심으로 보여주는 시뮬레이션입니다.
-        </div>
-        <div class="pill-wrap">
-            <div class="pill">복지 → 병원·돌봄센터</div>
-            <div class="pill">교육 → 학교·도서관</div>
-            <div class="pill">안전 → 경찰·CCTV</div>
-            <div class="pill">인프라 → 도로·버스·공원</div>
-            <div class="pill">에너지 → 태양광·수소·ESS</div>
-        </div>
+    <style>
+    .main-title {
+        font-size: 34px;
+        font-weight: 950;
+        color: #1f2328;
+        margin-bottom: 6px;
+    }
+    .main-subtitle {
+        font-size: 15px;
+        color: #57606a;
+        line-height: 1.65;
+        margin-bottom: 16px;
+    }
+    .guide-box {
+        background: #fff8c5;
+        border: 1px solid #f0d66b;
+        border-radius: 16px;
+        padding: 16px 18px;
+        color: #1f2328;
+        line-height: 1.65;
+        margin-bottom: 18px;
+    }
+    </style>
+    <div class="main-title">🎮 NOVA시 게임형 정책 처치 시뮬레이션</div>
+    <div class="main-subtitle">
+        이 화면은 2차 대시보드의 상세 결과를 보여주기 전,
+        예산·에너지 배분이라는 정책 처치가 A~E구역의 도시 구조를 어떻게 바꾸는지
+        게임 화면처럼 보여주는 1차 시뮬레이션입니다.
     </div>
     """,
-    unsafe_allow_html=True
+    unsafe_allow_html=True,
 )
 
 if not budget_ok or not energy_ok:
     st.markdown(
         """
-        <div class="notice-card">
-            <b>시뮬레이션을 시작하려면 조건이 필요합니다.</b><br>
+        <div class="guide-box">
+            <b>시뮬레이션 실행 조건</b><br>
             예산 배분 합계와 에너지 배분 합계가 각각 정확히 100%가 되어야 합니다.
-            왼쪽 슬라이더를 조정한 뒤 다시 실행해 주세요.
+            왼쪽 사이드바에서 비율을 조정한 뒤 다시 실행해 주세요.
         </div>
         """,
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )
     st.stop()
+
+model_result = run_model_or_fallback(
+    welfare,
+    education,
+    energy_infra,
+    general_infra,
+    safety,
+    solar,
+    hydrogen,
+    ess,
+    external,
+)
 
 if not play:
     st.markdown(
         """
-        <div class="stage-card">
-            <div class="stage-title">🎬 아직 정책 처치 장면이 재생되지 않았습니다</div>
-            <div class="stage-desc">
-                왼쪽에서 예산과 에너지 배분을 선택한 뒤 <b>정책 처치 장면 재생</b> 버튼을 누르면,
-                각 예산 항목이 도시 시설로 바뀌는 과정을 그림으로 볼 수 있습니다.
-                최종 수치 분석은 이 장면 이후 2차 대시보드에서 확인합니다.
-            </div>
+        <div class="guide-box">
+            왼쪽에서 정책 처치를 설정한 뒤 <b>도시 변화 시뮬레이션 재생</b> 버튼을 누르세요.
+            버튼을 누르면 시설이 순서대로 나타나고, 시민 만족도 막대가 채워지면서
+            도시가 변화하는 장면이 재생됩니다.
         </div>
         """,
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )
 
-    show_process_map(1)
-    show_effect_strip()
-    show_city_scene(welfare, education, energy_infra, general_infra, safety)
-    show_dashboard_connection_card(
-        dashboard_url,
+components.html(
+    make_game_html(
         preset_choice,
         welfare,
         education,
@@ -995,161 +1488,18 @@ if not play:
         solar,
         hydrogen,
         ess,
-        external
-    )
-    st.stop()
-
-# ==================================================
-# 그림형 시뮬레이션 재생
-# ==================================================
-progress = st.progress(0)
-status_area = st.empty()
-content_area = st.empty()
-
-# Scene 1
-status_area.info("1장면: 정책 처치가 입력됩니다.")
-progress.progress(15)
-with content_area.container():
-    show_process_map(1)
-
-    st.markdown(
-        """
-        <div class="stage-card">
-            <div class="stage-title">🎛️ 1장면. 정책 처치 입력</div>
-            <div class="stage-desc">
-                먼저 시민 만족도를 바꾸는 정책 처치를 입력합니다.
-                여기서 처치는 예산과 에너지 비율입니다.
-                이번 시뮬레이션에서는 이 값들이 최종 점수로 바로 계산되는 것이 아니라,
-                도시 안의 시설 변화로 표현됩니다.
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    show_budget_treatment_cards(welfare, education, energy_infra, general_infra, safety)
-
-time.sleep(speed)
-
-# Scene 2
-status_area.info("2장면: 예산 처치가 도시 시설로 바뀝니다.")
-progress.progress(35)
-with content_area.container():
-    show_process_map(2)
-
-    st.markdown(
-        """
-        <div class="stage-card">
-            <div class="stage-title">🏗️ 2장면. 예산이 도시 시설로 바뀌는 과정</div>
-            <div class="stage-desc">
-                복지 예산은 병원과 돌봄센터로, 교육 예산은 학교와 도서관으로,
-                안전 예산은 경찰·CCTV·소방으로 표현됩니다.
-                즉, 예산은 단순한 숫자가 아니라 시민이 실제로 보게 되는 도시 시설로 변환됩니다.
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    show_effect_strip()
-    show_city_scene(welfare, education, energy_infra, general_infra, safety)
-
-time.sleep(speed)
-
-# Scene 3
-status_area.info("3장면: 에너지 처치가 도시 에너지 설비로 바뀝니다.")
-progress.progress(55)
-with content_area.container():
-    show_process_map(3)
-
-    st.markdown(
-        """
-        <div class="stage-card">
-            <div class="stage-title">⚡ 3장면. 에너지 배분이 설비로 나타나는 과정</div>
-            <div class="stage-desc">
-                태양광 비중이 커지면 지붕형 태양광 패널이 늘어나고,
-                수소연료전지 비중이 커지면 안정적인 발전 설비가 생깁니다.
-                ESS는 에너지를 저장하는 배터리 시설로, 외부전력망은 도시 밖 전력망 의존으로 표현됩니다.
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    show_energy_scene(solar, hydrogen, ess, external)
-
-time.sleep(speed)
-
-# Scene 4
-status_area.info("4장면: 예산 시설과 에너지 설비가 결합된 스마트시티 장면이 완성됩니다.")
-progress.progress(78)
-with content_area.container():
-    show_process_map(4)
-
-    st.markdown(
-        """
-        <div class="stage-card">
-            <div class="stage-title">🌆 4장면. 처치가 적용된 NOVA시</div>
-            <div class="stage-desc">
-                이제 예산 처치와 에너지 처치가 동시에 적용된 도시 장면을 봅니다.
-                이 장면은 어떤 정책에 더 많은 자원을 배분했는지에 따라 도시의 모습이 달라진다는 점을 보여줍니다.
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    show_city_scene(welfare, education, energy_infra, general_infra, safety)
-
-    st.markdown('<div class="transition-arrow">＋</div>', unsafe_allow_html=True)
-
-    show_energy_scene(solar, hydrogen, ess, external)
-
-time.sleep(speed)
-
-# Scene 5
-status_area.success("5장면 완료: 그림형 처치 시뮬레이션이 끝났습니다.")
-progress.progress(100)
-with content_area.container():
-    show_process_map(5)
-
-    st.markdown(
-        """
-        <div class="final-scene-card">
-            <div class="final-title">🎉 정책 처치 장면이 완성되었습니다</div>
-            <div class="final-desc">
-                지금까지의 화면은 예산과 에너지 배분이라는 정책 처치가 도시 안에서
-                어떤 시설과 장면으로 나타나는지를 보여주는 1차 시뮬레이션입니다.
-                구체적인 만족도 변화, 구역별 점수, 에너지 자립률, 시나리오 비교는
-                이어서 2차 대시보드에서 확인하면 됩니다.
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    show_effect_strip()
-    show_city_scene(welfare, education, energy_infra, general_infra, safety)
-    show_energy_scene(solar, hydrogen, ess, external)
-
-show_dashboard_connection_card(
-    dashboard_url,
-    preset_choice,
-    welfare,
-    education,
-    energy_infra,
-    general_infra,
-    safety,
-    solar,
-    hydrogen,
-    ess,
-    external
+        external,
+        model_result,
+        dashboard_url,
+    ),
+    height=1450,
+    scrolling=True,
 )
 
 st.markdown("### 발표 연결 문장 예시")
 st.markdown(
     """
-    이 장면형 시뮬레이션은 정책 처치가 도시 공간에 어떻게 나타나는지를 보여주는 단계입니다.  
-    이제 같은 입력값을 바탕으로 2차 대시보드에서 실제 만족도, 에너지 자립률, 구역별 차이를 확인하겠습니다.
+    이 1차 시뮬레이션은 정책 처치가 도시 장면에 어떻게 반영되는지를 보여줍니다.  
+    이제 같은 입력값을 2차 대시보드에서 확인하면서, 실제 시민 만족도와 에너지 자립률이 어떻게 달라졌는지 분석하겠습니다.
     """
 )
