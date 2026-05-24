@@ -130,17 +130,20 @@ DISTRICT_KEYS = [
 ]
 
 
+# ==================================================
 # 하나의 마을 지도 안에서의 위치
+# 흰 박스 내용이 잘리지 않도록 w/h를 넓힌 버전
+# ==================================================
 DISTRICT_INFO = {
     "A구역(산업단지)": {
         "short": "A",
         "label": "A구역 산업단지",
         "icon": "🏭",
         "desc": "근로자 중심 · 이동성·에너지·인프라 민감",
-        "x": 70,
-        "y": 430,
-        "w": 285,
-        "h": 250,
+        "x": 55,
+        "y": 420,
+        "w": 365,
+        "h": 335,
         "people": ["👷", "👩‍🏭", "🧑‍💼", "👨‍🔧", "👩‍💼"],
         "weights": {
             "welfare": 0.45,
@@ -155,10 +158,10 @@ DISTRICT_INFO = {
         "label": "B구역 대학가",
         "icon": "🎓",
         "desc": "학생 중심 · 교육·문화·기회 민감",
-        "x": 370,
-        "y": 145,
-        "w": 300,
-        "h": 250,
+        "x": 330,
+        "y": 130,
+        "w": 365,
+        "h": 335,
         "people": ["🧑‍🎓", "👩‍🎓", "🧑‍💻", "👨‍🎓", "👩‍💻"],
         "weights": {
             "welfare": 0.35,
@@ -173,10 +176,10 @@ DISTRICT_INFO = {
         "label": "C구역 복지타운",
         "icon": "🏥",
         "desc": "노인·취약계층 중심 · 복지·안전 민감",
-        "x": 820,
-        "y": 150,
-        "w": 310,
-        "h": 255,
+        "x": 790,
+        "y": 135,
+        "w": 370,
+        "h": 335,
         "people": ["👵", "👴", "👩‍⚕️", "🧓", "👨‍⚕️"],
         "weights": {
             "welfare": 1.65,
@@ -191,10 +194,10 @@ DISTRICT_INFO = {
         "label": "D구역 신도시",
         "icon": "🏙️",
         "desc": "혼합형 시민 구성 · 균형 정책 반응",
-        "x": 415,
-        "y": 515,
-        "w": 320,
-        "h": 260,
+        "x": 300,
+        "y": 545,
+        "w": 380,
+        "h": 345,
         "people": ["👨‍👩‍👧", "🧑‍💼", "👩‍💻", "🧑", "👨‍👩‍👦"],
         "weights": {
             "welfare": 0.90,
@@ -209,10 +212,10 @@ DISTRICT_INFO = {
         "label": "E구역 구도심",
         "icon": "🏘️",
         "desc": "노후 인프라 · 복지·안전·생활SOC 민감",
-        "x": 820,
-        "y": 535,
-        "w": 310,
-        "h": 260,
+        "x": 775,
+        "y": 560,
+        "w": 380,
+        "h": 345,
         "people": ["🧑", "👵", "👴", "👨‍👩‍👧", "👩"],
         "weights": {
             "welfare": 1.15,
@@ -673,8 +676,8 @@ def resident_emojis_for_district(district_key, score):
         mood = "😄"
 
     layout = [
-        (22, 178), (58, 176), (94, 180), (130, 177), (166, 181),
-        (202, 178), (238, 180), (78, 207), (120, 208), (162, 207),
+        (28, 238), (64, 236), (100, 239), (136, 237), (172, 240),
+        (208, 237), (244, 239), (88, 268), (130, 269), (172, 268),
     ]
 
     residents = []
@@ -839,8 +842,8 @@ def make_facility_html(district_key, budget_values):
     facilities = get_facilities_for_district(district_key, budget_values)
 
     positions = [
-        (28, 94), (86, 94), (144, 94), (202, 94),
-        (58, 140), (116, 140), (174, 140),
+        (32, 166), (92, 166), (152, 166), (212, 166),
+        (62, 214), (122, 214), (182, 214),
     ]
 
     html = ""
@@ -910,6 +913,11 @@ def make_district_zone_html(district_key, score, budget_values):
         {facilities_html}
         {residents_html}
 
+        <div class="comment-bubble">
+            <div class="comment-title">{tone}</div>
+            <div class="comment-text">{detail}</div>
+        </div>
+
         <div class="district-score">
             <div class="score-face">{face}</div>
             <div class="score-center">
@@ -922,11 +930,6 @@ def make_district_zone_html(district_key, score, budget_values):
                 </div>
             </div>
             <div class="score-num" style="color:{color};">{score:.1f}</div>
-        </div>
-
-        <div class="comment-bubble">
-            <div class="comment-title">{tone}</div>
-            <div class="comment-text">{detail}</div>
         </div>
     </div>
     """
@@ -1261,8 +1264,8 @@ def make_main_scene_html(
 
     .village-board {{
         position: relative;
-        width: 1220px;
-        height: 880px;
+        width: 1240px;
+        height: 960px;
         border-radius: 32px;
         overflow: hidden;
         border: 1px solid #d0d7de;
@@ -1315,8 +1318,8 @@ def make_main_scene_html(
 
     .road-1 {{
         left: -80px;
-        top: 410px;
-        width: 1400px;
+        top: 430px;
+        width: 1450px;
         height: 44px;
         transform: rotate(-7deg);
     }}
@@ -1325,15 +1328,15 @@ def make_main_scene_html(
         left: 390px;
         top: -80px;
         width: 50px;
-        height: 1050px;
+        height: 1100px;
         transform: rotate(10deg);
     }}
 
     .road-3 {{
-        left: 790px;
+        left: 810px;
         top: -80px;
         width: 50px;
-        height: 1050px;
+        height: 1100px;
         transform: rotate(-12deg);
     }}
 
@@ -1341,7 +1344,7 @@ def make_main_scene_html(
         position: absolute;
         left: -60px;
         bottom: 22px;
-        width: 1400px;
+        width: 1450px;
         height: 74px;
         transform: rotate(-5deg);
         background:
@@ -1372,92 +1375,94 @@ def make_main_scene_html(
         left: 12px;
         right: 12px;
         top: 12px;
-        height: 62px;
-        background: rgba(255,255,255,0.96);
+        height: 72px;
+        background: rgba(255,255,255,0.97);
         border: 1px solid #d0d7de;
-        border-radius: 18px;
+        border-radius: 20px;
         display: grid;
-        grid-template-columns: 46px 1fr;
-        gap: 9px;
+        grid-template-columns: 52px 1fr;
+        gap: 10px;
         align-items: center;
-        padding: 9px 11px;
+        padding: 10px 13px;
         z-index: 15;
         box-shadow: 0 7px 14px rgba(27,31,36,0.06);
     }}
 
     .district-icon {{
-        width: 42px;
-        height: 42px;
-        border-radius: 15px;
+        width: 48px;
+        height: 48px;
+        border-radius: 16px;
         background: #f6f8fa;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 25px;
+        font-size: 27px;
     }}
 
     .district-title {{
-        font-size: 15px;
+        font-size: 17px;
         font-weight: 900;
         color: #1f2328;
-        margin-bottom: 2px;
+        margin-bottom: 3px;
+        white-space: nowrap;
     }}
 
     .district-desc {{
-        font-size: 10.5px;
+        font-size: 12px;
         color: #57606a;
-        line-height: 1.28;
+        line-height: 1.35;
+        white-space: normal;
     }}
 
     .applied-panel {{
         position: absolute;
         left: 12px;
         right: 12px;
-        top: 82px;
-        height: 46px;
-        background: rgba(255,255,255,0.90);
+        top: 94px;
+        height: 68px;
+        background: rgba(255,255,255,0.94);
         border: 1px solid #d0d7de;
-        border-radius: 16px;
+        border-radius: 18px;
         z-index: 16;
-        padding: 6px 8px;
+        padding: 8px 10px;
         box-shadow: 0 6px 12px rgba(27,31,36,0.05);
     }}
 
     .applied-title {{
-        font-size: 9px;
+        font-size: 11px;
         font-weight: 900;
         color: #57606a;
-        margin-bottom: 3px;
+        margin-bottom: 6px;
     }}
 
     .applied-list {{
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 5px;
+        gap: 8px;
     }}
 
     .applied-item {{
         display: grid;
-        grid-template-columns: 23px 1fr;
-        gap: 4px;
+        grid-template-columns: 28px 1fr;
+        gap: 6px;
         align-items: center;
         min-width: 0;
     }}
 
     .applied-icon {{
-        width: 22px;
-        height: 22px;
-        border-radius: 8px;
+        width: 26px;
+        height: 26px;
+        border-radius: 9px;
         background: var(--item-color);
         color: white;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 13px;
+        font-size: 15px;
     }}
 
     .applied-name {{
-        font-size: 9px;
+        font-size: 11px;
         font-weight: 900;
         color: #1f2328;
         white-space: nowrap;
@@ -1466,7 +1471,7 @@ def make_main_scene_html(
     }}
 
     .applied-sub {{
-        font-size: 8px;
+        font-size: 10px;
         color: #6b7280;
     }}
 
@@ -1488,17 +1493,17 @@ def make_main_scene_html(
 
     .road-a {{
         left: -30px;
-        top: 155px;
-        width: 370px;
+        top: 190px;
+        width: 420px;
         height: 24px;
         transform: rotate(-8deg);
     }}
 
     .road-b {{
-        left: 138px;
-        top: 130px;
+        left: 160px;
+        top: 165px;
         width: 22px;
-        height: 132px;
+        height: 155px;
         transform: rotate(10deg);
     }}
 
@@ -1561,33 +1566,61 @@ def make_main_scene_html(
         box-shadow: 0 4px 8px rgba(27,31,36,0.12);
     }}
 
+    .comment-bubble {{
+        position: absolute;
+        left: 12px;
+        right: 12px;
+        bottom: 88px;
+        min-height: 62px;
+        background: rgba(255,255,255,0.96);
+        border: 1px solid #d0d7de;
+        border-radius: 18px;
+        padding: 10px 12px;
+        z-index: 18;
+        box-shadow: 0 8px 16px rgba(27,31,36,0.07);
+    }}
+
+    .comment-title {{
+        font-size: 13px;
+        font-weight: 900;
+        color: #1f2328;
+        margin-bottom: 5px;
+    }}
+
+    .comment-text {{
+        font-size: 11.5px;
+        color: #57606a;
+        line-height: 1.45;
+        white-space: normal;
+    }}
+
     .district-score {{
         position: absolute;
         left: 12px;
         right: 12px;
         bottom: 12px;
-        height: 58px;
-        background: rgba(255,255,255,0.96);
+        height: 68px;
+        background: rgba(255,255,255,0.97);
         border: 1px solid #d0d7de;
-        border-radius: 18px;
+        border-radius: 20px;
         display: grid;
-        grid-template-columns: 42px 1fr 54px;
-        gap: 8px;
+        grid-template-columns: 48px 1fr 64px;
+        gap: 10px;
         align-items: center;
-        padding: 9px 11px;
+        padding: 10px 12px;
         z-index: 17;
         box-shadow: 0 8px 16px rgba(27,31,36,0.06);
     }}
 
     .score-face {{
-        width: 36px;
-        height: 36px;
-        border-radius: 13px;
+        width: 42px;
+        height: 42px;
+        border-radius: 15px;
         background: #fff7ed;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 22px;
+        font-size: 25px;
     }}
 
     .score-row {{
@@ -1599,13 +1632,13 @@ def make_main_scene_html(
     }}
 
     .score-state {{
-        font-size: 12px;
+        font-size: 13.5px;
         font-weight: 900;
         color: #1f2328;
     }}
 
     .score-stars {{
-        font-size: 11px;
+        font-size: 12px;
         color: #f59e0b;
         font-weight: 800;
     }}
@@ -1623,36 +1656,10 @@ def make_main_scene_html(
     }}
 
     .score-num {{
-        font-size: 24px;
+        font-size: 28px;
         font-weight: 900;
         text-align: right;
         line-height: 1;
-    }}
-
-    .comment-bubble {{
-        position: absolute;
-        left: 14px;
-        right: 14px;
-        bottom: 78px;
-        background: rgba(255,255,255,0.94);
-        border: 1px solid #d0d7de;
-        border-radius: 16px;
-        padding: 8px 10px;
-        z-index: 18;
-        box-shadow: 0 8px 16px rgba(27,31,36,0.07);
-    }}
-
-    .comment-title {{
-        font-size: 11px;
-        font-weight: 900;
-        color: #1f2328;
-        margin-bottom: 3px;
-    }}
-
-    .comment-text {{
-        font-size: 9.5px;
-        color: #57606a;
-        line-height: 1.35;
     }}
 
     .energy-section {{
@@ -1852,8 +1859,8 @@ def make_main_scene_html(
                     <div class="hero-eyebrow">NOVA Village Simulation</div>
                     <div class="hero-title">A~E구역이 하나로 연결된 마을형 스마트시티 시뮬레이션</div>
                     <div class="hero-desc">
-                        카드형 분석 화면이 아니라, 하나의 마을 지도 안에 A구역부터 E구역까지 함께 배치했습니다.
-                        불필요한 구름과 숲은 제거하고, 정책 아이템·시설·주민·댓글·만족도가 한 화면에서 보이도록 구성했습니다.
+                        하나의 마을 지도 안에 A구역부터 E구역까지 함께 배치했습니다.
+                        정책 아이템, 시설, 주민, 댓글, 만족도를 한 화면에서 확인할 수 있습니다.
                     </div>
                 </div>
 
@@ -1931,7 +1938,6 @@ def make_main_scene_html(
                 <div class="village-title-card">
                     <div class="village-title">NOVA 통합 마을</div>
                     <div class="village-desc">
-                        A~E구역이 하나의 도시 안에서 연결되어 있으며,
                         정책 처치에 따라 구역별 시설과 주민 반응이 달라집니다.
                     </div>
                 </div>
@@ -1972,7 +1978,7 @@ def make_main_scene_html(
             </div>
             {dashboard_button}
             <div class="mini-note">
-                이 버전은 마을형 배치를 유지하되, 불필요한 구름·숲·산 장식은 제거하고 주민 댓글과 만족도 표현을 강화했습니다.
+                이 버전은 마을형 배치를 유지하되, 흰 박스 내부 텍스트가 잘리지 않도록 구역과 내부 박스 크기를 확장했습니다.
             </div>
         </div>
     </div>
@@ -2071,9 +2077,9 @@ if not HAS_CLASSES:
 st.markdown("""
 <div class="box-warn">
 <b>이번 수정의 핵심</b><br>
-- 카드형 분석 화면이 아니라 이전의 마을형 지도를 유지<br>
-- 불필요한 구름, 숲, 산 장식 제거<br>
-- A~E구역이 하나의 마을 안에 함께 배치되도록 구성<br>
+- 마을형 지도 유지<br>
+- A~E구역이 하나의 마을 안에 함께 배치<br>
+- 흰 박스 내부 내용이 잘리지 않도록 구역 카드와 내부 박스 확대<br>
 - 각 구역에 정책 아이템, 시설, 주민, 만족도 댓글 표시<br>
 - 사람들의 만족도를 표정 이모지와 댓글로 표현
 </div>
@@ -2097,13 +2103,19 @@ result = run_model_or_fallback(
 
 scene_html = make_main_scene_html(
     preset_choice,
-    welfare, education, energy_infra, general_infra, safety,
-    solar, hydrogen, ess, external,
+    welfare, education,
+    energy_infra,
+    general_infra,
+    safety,
+    solar,
+    hydrogen,
+    ess,
+    external,
     result,
     dashboard_url
 )
 
-components.html(scene_html, height=2800, scrolling=True)
+components.html(scene_html, height=3100, scrolling=True)
 
 st.markdown("### 발표용 연결 멘트 예시")
 st.markdown("""
