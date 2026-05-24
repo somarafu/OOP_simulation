@@ -131,8 +131,8 @@ DISTRICT_KEYS = [
 
 
 # ==================================================
-# 하나의 마을 지도 안에서의 위치
-# 흰 박스 내용이 잘리지 않도록 w/h를 넓힌 버전
+# 마을 지도 안 구역 위치
+# 내부 정보가 모두 보이도록 구역 크기를 크게 조정
 # ==================================================
 DISTRICT_INFO = {
     "A구역(산업단지)": {
@@ -140,10 +140,10 @@ DISTRICT_INFO = {
         "label": "A구역 산업단지",
         "icon": "🏭",
         "desc": "근로자 중심 · 이동성·에너지·인프라 민감",
-        "x": 55,
-        "y": 420,
-        "w": 365,
-        "h": 335,
+        "x": 80,
+        "y": 760,
+        "w": 455,
+        "h": 520,
         "people": ["👷", "👩‍🏭", "🧑‍💼", "👨‍🔧", "👩‍💼"],
         "weights": {
             "welfare": 0.45,
@@ -158,10 +158,10 @@ DISTRICT_INFO = {
         "label": "B구역 대학가",
         "icon": "🎓",
         "desc": "학생 중심 · 교육·문화·기회 민감",
-        "x": 330,
-        "y": 130,
-        "w": 365,
-        "h": 335,
+        "x": 150,
+        "y": 150,
+        "w": 455,
+        "h": 520,
         "people": ["🧑‍🎓", "👩‍🎓", "🧑‍💻", "👨‍🎓", "👩‍💻"],
         "weights": {
             "welfare": 0.35,
@@ -176,10 +176,10 @@ DISTRICT_INFO = {
         "label": "C구역 복지타운",
         "icon": "🏥",
         "desc": "노인·취약계층 중심 · 복지·안전 민감",
-        "x": 790,
-        "y": 135,
-        "w": 370,
-        "h": 335,
+        "x": 995,
+        "y": 150,
+        "w": 455,
+        "h": 520,
         "people": ["👵", "👴", "👩‍⚕️", "🧓", "👨‍⚕️"],
         "weights": {
             "welfare": 1.65,
@@ -194,10 +194,10 @@ DISTRICT_INFO = {
         "label": "D구역 신도시",
         "icon": "🏙️",
         "desc": "혼합형 시민 구성 · 균형 정책 반응",
-        "x": 300,
-        "y": 545,
-        "w": 380,
-        "h": 345,
+        "x": 575,
+        "y": 790,
+        "w": 455,
+        "h": 520,
         "people": ["👨‍👩‍👧", "🧑‍💼", "👩‍💻", "🧑", "👨‍👩‍👦"],
         "weights": {
             "welfare": 0.90,
@@ -212,10 +212,10 @@ DISTRICT_INFO = {
         "label": "E구역 구도심",
         "icon": "🏘️",
         "desc": "노후 인프라 · 복지·안전·생활SOC 민감",
-        "x": 775,
-        "y": 560,
-        "w": 380,
-        "h": 345,
+        "x": 1070,
+        "y": 780,
+        "w": 455,
+        "h": 520,
         "people": ["🧑", "👵", "👴", "👨‍👩‍👧", "👩"],
         "weights": {
             "welfare": 1.15,
@@ -228,6 +228,9 @@ DISTRICT_INFO = {
 }
 
 
+# ==================================================
+# 아이템 정의
+# ==================================================
 BUDGET_ITEMS = {
     "welfare": {
         "name": "복지",
@@ -663,7 +666,7 @@ def get_facilities_for_district(district_key, budget_values):
     return weighted_items[:7]
 
 
-def resident_emojis_for_district(district_key, score):
+def get_residents_for_district(district_key, score):
     info = DISTRICT_INFO[district_key]
 
     if score < 50:
@@ -675,15 +678,10 @@ def resident_emojis_for_district(district_key, score):
     else:
         mood = "😄"
 
-    layout = [
-        (28, 238), (64, 236), (100, 239), (136, 237), (172, 240),
-        (208, 237), (244, 239), (88, 268), (130, 269), (172, 268),
-    ]
-
     residents = []
-    for i, (x, y) in enumerate(layout):
+    for i in range(10):
         person = info["people"][i % len(info["people"])]
-        residents.append((person, mood, x, y))
+        residents.append((person, mood))
 
     return residents
 
@@ -841,18 +839,12 @@ def make_applied_item_html(district_key, budget_values):
 def make_facility_html(district_key, budget_values):
     facilities = get_facilities_for_district(district_key, budget_values)
 
-    positions = [
-        (32, 166), (92, 166), (152, 166), (212, 166),
-        (62, 214), (122, 214), (182, 214),
-    ]
-
     html = ""
 
-    for idx, (key, icon, name, _) in enumerate(facilities):
+    for key, icon, name, _ in facilities:
         item = BUDGET_ITEMS[key]
-        x, y = positions[idx]
         html += f"""
-        <div class="facility-item" style="left:{x}px; top:{y}px; --item-color:{item['color']};">
+        <div class="facility-item" style="--item-color:{item['color']};">
             <div class="facility-emoji">{icon}</div>
             <div class="facility-caption">{name}</div>
         </div>
@@ -862,13 +854,13 @@ def make_facility_html(district_key, budget_values):
 
 
 def make_residents_html(district_key, score):
-    residents = resident_emojis_for_district(district_key, score)
+    residents = get_residents_for_district(district_key, score)
 
     html = ""
 
-    for person, mood, x, y in residents:
+    for person, mood in residents:
         html += f"""
-        <div class="resident-item" style="left:{x}px; top:{y}px;">
+        <div class="resident-item">
             <div class="resident-person">{person}</div>
             <div class="resident-mood">{mood}</div>
         </div>
@@ -892,6 +884,7 @@ def make_district_zone_html(district_key, score, budget_values):
     return f"""
     <div class="district-zone"
          style="left:{info['x']}px; top:{info['y']}px; width:{info['w']}px; height:{info['h']}px;">
+
         <div class="district-header">
             <div class="district-icon">{info['icon']}</div>
             <div>
@@ -907,11 +900,24 @@ def make_district_zone_html(district_key, score, budget_values):
             </div>
         </div>
 
-        <div class="mini-road road-a"></div>
-        <div class="mini-road road-b"></div>
+        <div class="district-scene">
+            <div class="scene-road scene-road-a"></div>
+            <div class="scene-road scene-road-b"></div>
 
-        {facilities_html}
-        {residents_html}
+            <div class="scene-section facility-section">
+                <div class="scene-label">시설 변화</div>
+                <div class="facility-grid">
+                    {facilities_html}
+                </div>
+            </div>
+
+            <div class="scene-section resident-section">
+                <div class="scene-label">주민 반응</div>
+                <div class="resident-grid">
+                    {residents_html}
+                </div>
+            </div>
+        </div>
 
         <div class="comment-bubble">
             <div class="comment-title">{tone}</div>
@@ -1264,8 +1270,8 @@ def make_main_scene_html(
 
     .village-board {{
         position: relative;
-        width: 1240px;
-        height: 960px;
+        width: 1600px;
+        height: 1390px;
         border-radius: 32px;
         overflow: hidden;
         border: 1px solid #d0d7de;
@@ -1278,7 +1284,7 @@ def make_main_scene_html(
         position: absolute;
         left: 28px;
         top: 28px;
-        width: 340px;
+        width: 390px;
         background: rgba(255,255,255,0.94);
         border: 1px solid #d0d7de;
         border-radius: 22px;
@@ -1312,40 +1318,40 @@ def make_main_scene_html(
         position: absolute;
         left: 0;
         top: 50%;
-        width: 1600px;
+        width: 1900px;
         border-top: 3px dashed rgba(255,255,255,0.72);
     }}
 
     .road-1 {{
-        left: -80px;
-        top: 430px;
-        width: 1450px;
-        height: 44px;
+        left: -100px;
+        top: 690px;
+        width: 1900px;
+        height: 46px;
         transform: rotate(-7deg);
     }}
 
     .road-2 {{
-        left: 390px;
-        top: -80px;
-        width: 50px;
-        height: 1100px;
+        left: 530px;
+        top: -100px;
+        width: 54px;
+        height: 1600px;
         transform: rotate(10deg);
     }}
 
     .road-3 {{
-        left: 810px;
-        top: -80px;
-        width: 50px;
-        height: 1100px;
+        left: 1035px;
+        top: -100px;
+        width: 54px;
+        height: 1600px;
         transform: rotate(-12deg);
     }}
 
     .water-line {{
         position: absolute;
-        left: -60px;
-        bottom: 22px;
-        width: 1450px;
-        height: 74px;
+        left: -80px;
+        bottom: 25px;
+        width: 1850px;
+        height: 80px;
         transform: rotate(-5deg);
         background:
             repeating-linear-gradient(
@@ -1361,108 +1367,108 @@ def make_main_scene_html(
     .district-zone {{
         position: absolute;
         background:
-            linear-gradient(180deg, rgba(255,255,255,0.32), rgba(255,255,255,0.14)),
+            linear-gradient(180deg, rgba(255,255,255,0.36), rgba(255,255,255,0.20)),
             repeating-linear-gradient(45deg, #dcedc5 0 18px, #d7e8bf 18px 36px);
         border: 2px solid rgba(255,255,255,0.95);
-        border-radius: 26px;
+        border-radius: 28px;
         box-shadow: 0 16px 30px rgba(27,31,36,0.12);
         overflow: hidden;
         z-index: 5;
+        padding: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
     }}
 
     .district-header {{
-        position: absolute;
-        left: 12px;
-        right: 12px;
-        top: 12px;
-        height: 72px;
-        background: rgba(255,255,255,0.97);
+        min-height: 82px;
+        background: rgba(255,255,255,0.98);
         border: 1px solid #d0d7de;
-        border-radius: 20px;
+        border-radius: 22px;
         display: grid;
-        grid-template-columns: 52px 1fr;
-        gap: 10px;
+        grid-template-columns: 58px 1fr;
+        gap: 12px;
         align-items: center;
-        padding: 10px 13px;
+        padding: 12px 14px;
         z-index: 15;
         box-shadow: 0 7px 14px rgba(27,31,36,0.06);
     }}
 
     .district-icon {{
-        width: 48px;
-        height: 48px;
-        border-radius: 16px;
+        width: 52px;
+        height: 52px;
+        border-radius: 18px;
         background: #f6f8fa;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 27px;
+        font-size: 29px;
     }}
 
     .district-title {{
-        font-size: 17px;
+        font-size: 19px;
         font-weight: 900;
         color: #1f2328;
-        margin-bottom: 3px;
+        margin-bottom: 4px;
         white-space: nowrap;
     }}
 
     .district-desc {{
-        font-size: 12px;
+        font-size: 13px;
         color: #57606a;
-        line-height: 1.35;
+        line-height: 1.4;
         white-space: normal;
     }}
 
     .applied-panel {{
-        position: absolute;
-        left: 12px;
-        right: 12px;
-        top: 94px;
-        height: 68px;
-        background: rgba(255,255,255,0.94);
+        min-height: 84px;
+        background: rgba(255,255,255,0.96);
         border: 1px solid #d0d7de;
-        border-radius: 18px;
+        border-radius: 20px;
         z-index: 16;
-        padding: 8px 10px;
+        padding: 10px 12px;
         box-shadow: 0 6px 12px rgba(27,31,36,0.05);
     }}
 
     .applied-title {{
-        font-size: 11px;
+        font-size: 12px;
         font-weight: 900;
         color: #57606a;
-        margin-bottom: 6px;
+        margin-bottom: 8px;
     }}
 
     .applied-list {{
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 8px;
+        gap: 10px;
     }}
 
     .applied-item {{
         display: grid;
-        grid-template-columns: 28px 1fr;
-        gap: 6px;
+        grid-template-columns: 34px 1fr;
+        gap: 8px;
         align-items: center;
         min-width: 0;
+        background: #f6f8fa;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        padding: 7px 8px;
     }}
 
     .applied-icon {{
-        width: 26px;
-        height: 26px;
-        border-radius: 9px;
+        width: 32px;
+        height: 32px;
+        border-radius: 11px;
         background: var(--item-color);
         color: white;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 15px;
+        font-size: 18px;
     }}
 
     .applied-name {{
-        font-size: 11px;
+        font-size: 12px;
         font-weight: 900;
         color: #1f2328;
         white-space: nowrap;
@@ -1475,85 +1481,129 @@ def make_main_scene_html(
         color: #6b7280;
     }}
 
-    .mini-road {{
-        position: absolute;
-        background: rgba(123,132,145,0.80);
-        z-index: 6;
-        box-shadow: inset 0 0 0 2px rgba(255,255,255,0.14);
+    .district-scene {{
+        position: relative;
+        min-height: 145px;
+        background: rgba(255,255,255,0.42);
+        border: 1px solid rgba(255,255,255,0.78);
+        border-radius: 20px;
+        overflow: hidden;
+        display: grid;
+        grid-template-columns: 1.05fr 0.95fr;
+        gap: 12px;
+        padding: 12px;
     }}
 
-    .mini-road::after {{
+    .scene-road {{
+        position: absolute;
+        background: rgba(123,132,145,0.62);
+        z-index: 1;
+        pointer-events: none;
+    }}
+
+    .scene-road::after {{
         content: "";
         position: absolute;
         left: 0;
         top: 50%;
-        width: 500px;
-        border-top: 2px dashed rgba(255,255,255,0.72);
+        width: 700px;
+        border-top: 2px dashed rgba(255,255,255,0.68);
     }}
 
-    .road-a {{
-        left: -30px;
-        top: 190px;
-        width: 420px;
+    .scene-road-a {{
+        left: -60px;
+        top: 72px;
+        width: 620px;
         height: 24px;
-        transform: rotate(-8deg);
+        transform: rotate(-6deg);
     }}
 
-    .road-b {{
-        left: 160px;
-        top: 165px;
-        width: 22px;
-        height: 155px;
+    .scene-road-b {{
+        left: 210px;
+        top: -40px;
+        width: 24px;
+        height: 240px;
         transform: rotate(10deg);
     }}
 
+    .scene-section {{
+        position: relative;
+        z-index: 5;
+        background: rgba(255,255,255,0.78);
+        border: 1px solid #e5e7eb;
+        border-radius: 18px;
+        padding: 10px;
+    }}
+
+    .scene-label {{
+        font-size: 11px;
+        font-weight: 900;
+        color: #57606a;
+        margin-bottom: 8px;
+    }}
+
+    .facility-grid {{
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+    }}
+
     .facility-item {{
-        position: absolute;
-        width: 50px;
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        min-height: 58px;
         text-align: center;
-        z-index: 10;
+        padding: 6px 4px;
+        box-shadow: 0 4px 8px rgba(27,31,36,0.06);
     }}
 
     .facility-emoji {{
-        width: 38px;
-        height: 38px;
-        margin: 0 auto 2px;
-        border-radius: 13px;
+        width: 32px;
+        height: 32px;
+        margin: 0 auto 3px;
+        border-radius: 11px;
         background: var(--item-color);
         color: white;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 22px;
-        box-shadow: 0 6px 12px rgba(27,31,36,0.12);
+        font-size: 19px;
     }}
 
     .facility-caption {{
         font-size: 9px;
         font-weight: 800;
         color: #374151;
-        background: rgba(255,255,255,0.86);
-        border-radius: 999px;
-        padding: 2px 5px;
-        display: inline-block;
+        line-height: 1.15;
+    }}
+
+    .resident-grid {{
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 8px;
     }}
 
     .resident-item {{
-        position: absolute;
-        z-index: 12;
-        width: 32px;
-        height: 36px;
+        position: relative;
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 8px rgba(27,31,36,0.05);
     }}
 
     .resident-person {{
-        font-size: 25px;
-        filter: drop-shadow(0 3px 3px rgba(27,31,36,0.14));
+        font-size: 24px;
     }}
 
     .resident-mood {{
         position: absolute;
         right: -5px;
-        top: -7px;
+        top: -6px;
         width: 18px;
         height: 18px;
         border-radius: 50%;
@@ -1567,60 +1617,52 @@ def make_main_scene_html(
     }}
 
     .comment-bubble {{
-        position: absolute;
-        left: 12px;
-        right: 12px;
-        bottom: 88px;
-        min-height: 62px;
-        background: rgba(255,255,255,0.96);
+        min-height: 76px;
+        background: rgba(255,255,255,0.97);
         border: 1px solid #d0d7de;
-        border-radius: 18px;
-        padding: 10px 12px;
+        border-radius: 20px;
+        padding: 13px 15px;
         z-index: 18;
         box-shadow: 0 8px 16px rgba(27,31,36,0.07);
     }}
 
     .comment-title {{
-        font-size: 13px;
+        font-size: 15px;
         font-weight: 900;
         color: #1f2328;
-        margin-bottom: 5px;
+        margin-bottom: 6px;
     }}
 
     .comment-text {{
-        font-size: 11.5px;
+        font-size: 13px;
         color: #57606a;
-        line-height: 1.45;
+        line-height: 1.5;
         white-space: normal;
     }}
 
     .district-score {{
-        position: absolute;
-        left: 12px;
-        right: 12px;
-        bottom: 12px;
-        height: 68px;
-        background: rgba(255,255,255,0.97);
+        min-height: 78px;
+        background: rgba(255,255,255,0.98);
         border: 1px solid #d0d7de;
-        border-radius: 20px;
+        border-radius: 22px;
         display: grid;
-        grid-template-columns: 48px 1fr 64px;
-        gap: 10px;
+        grid-template-columns: 54px 1fr 78px;
+        gap: 12px;
         align-items: center;
-        padding: 10px 12px;
+        padding: 12px 14px;
         z-index: 17;
         box-shadow: 0 8px 16px rgba(27,31,36,0.06);
     }}
 
     .score-face {{
-        width: 42px;
-        height: 42px;
-        border-radius: 15px;
+        width: 48px;
+        height: 48px;
+        border-radius: 17px;
         background: #fff7ed;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 25px;
+        font-size: 28px;
     }}
 
     .score-row {{
@@ -1628,23 +1670,23 @@ def make_main_scene_html(
         justify-content: space-between;
         align-items: center;
         gap: 8px;
-        margin-bottom: 5px;
+        margin-bottom: 7px;
     }}
 
     .score-state {{
-        font-size: 13.5px;
+        font-size: 15px;
         font-weight: 900;
         color: #1f2328;
     }}
 
     .score-stars {{
-        font-size: 12px;
+        font-size: 14px;
         color: #f59e0b;
         font-weight: 800;
     }}
 
     .score-bar {{
-        height: 8px;
+        height: 10px;
         background: #e5e7eb;
         border-radius: 999px;
         overflow: hidden;
@@ -1656,7 +1698,7 @@ def make_main_scene_html(
     }}
 
     .score-num {{
-        font-size: 28px;
+        font-size: 34px;
         font-weight: 900;
         text-align: right;
         line-height: 1;
@@ -1860,7 +1902,7 @@ def make_main_scene_html(
                     <div class="hero-title">A~E구역이 하나로 연결된 마을형 스마트시티 시뮬레이션</div>
                     <div class="hero-desc">
                         하나의 마을 지도 안에 A구역부터 E구역까지 함께 배치했습니다.
-                        정책 아이템, 시설, 주민, 댓글, 만족도를 한 화면에서 확인할 수 있습니다.
+                        각 구역의 정책 아이템, 시설 변화, 주민 반응, 댓글, 만족도를 모두 보이도록 구조를 재정리했습니다.
                     </div>
                 </div>
 
@@ -1978,7 +2020,7 @@ def make_main_scene_html(
             </div>
             {dashboard_button}
             <div class="mini-note">
-                이 버전은 마을형 배치를 유지하되, 흰 박스 내부 텍스트가 잘리지 않도록 구역과 내부 박스 크기를 확장했습니다.
+                이 버전은 마을형 배치를 유지하되, 구역 내부 구조를 재정리하여 흰 박스 안의 정보가 모두 보이도록 수정했습니다.
             </div>
         </div>
     </div>
@@ -2079,8 +2121,8 @@ st.markdown("""
 <b>이번 수정의 핵심</b><br>
 - 마을형 지도 유지<br>
 - A~E구역이 하나의 마을 안에 함께 배치<br>
-- 흰 박스 내부 내용이 잘리지 않도록 구역 카드와 내부 박스 확대<br>
-- 각 구역에 정책 아이템, 시설, 주민, 만족도 댓글 표시<br>
+- 흰 박스 내부 정보가 잘리지 않도록 내부 구조를 세로형으로 재정리<br>
+- 적용 아이템, 시설 변화, 주민 반응, 댓글, 만족도를 모두 분리해서 표시<br>
 - 사람들의 만족도를 표정 이모지와 댓글로 표현
 </div>
 """, unsafe_allow_html=True)
@@ -2103,7 +2145,8 @@ result = run_model_or_fallback(
 
 scene_html = make_main_scene_html(
     preset_choice,
-    welfare, education,
+    welfare,
+    education,
     energy_infra,
     general_infra,
     safety,
@@ -2115,7 +2158,7 @@ scene_html = make_main_scene_html(
     dashboard_url
 )
 
-components.html(scene_html, height=3100, scrolling=True)
+components.html(scene_html, height=3800, scrolling=True)
 
 st.markdown("### 발표용 연결 멘트 예시")
 st.markdown("""
