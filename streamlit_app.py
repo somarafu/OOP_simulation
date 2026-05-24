@@ -3,11 +3,11 @@
 NOVA시 고도화 게임형 스마트시티 시뮬레이션
 simulation_story.py
 
-역할:
+목적:
 - 기존 dashboard.py는 2차 정량 분석 대시보드로 유지
 - 이 파일은 1차 게임형 시각화 앱
-- 예산·에너지 배분을 바꾸면 하나의 거대한 마을 맵에서
-  건물, 시민, 도로, 에너지 설비, 만족도 반응이 함께 변화함
+- 예산과 에너지 배분을 게임 아이템처럼 표현
+- 각 구역에 어떤 정책 아이템이 투입되었는지 직관적으로 표시
 
 실행:
 streamlit run simulation_story.py
@@ -22,17 +22,15 @@ numpy
 
 import os
 import sys
-import math
 import html as html_lib
 import urllib.parse
-from itertools import cycle
 
 import streamlit as st
 import streamlit.components.v1 as components
 
 
 # ==================================================
-# 기존 dashboard.py / classes.py 기반 import
+# classes.py import
 # ==================================================
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -41,8 +39,8 @@ try:
         Worker, Student, Caregiver, Unemployed, Elder,
         SolarPanel, HydrogenCell, ESS, ExternalGrid,
         Resource, EnergyGrid, District, City,
-        budget_to_fulfillment, energy_to_bonus,
-        BudgetAllocationError, LowSatisfactionWarning, EnergyAllocationError
+        energy_to_bonus,
+        BudgetAllocationError, EnergyAllocationError
     )
     HAS_CLASSES = True
     IMPORT_ERROR_MESSAGE = ""
@@ -63,7 +61,7 @@ st.set_page_config(
 
 
 # ==================================================
-# dashboard.py와 같은 프리셋
+# 프리셋
 # ==================================================
 PRESETS = {
     "직접 입력": None,
@@ -139,21 +137,16 @@ DISTRICT_KEYS = [
 ]
 
 
-# 하나의 큰 지도 안에서 각 구역이 차지하는 위치
-# x, y, w, h는 CSS absolute position 기준
 DISTRICT_INFO = {
     "A구역(산업단지)": {
-        "short": "A",
         "label": "A구역 산업단지",
-        "main_icon": "🏭",
-        "desc": "근로자 중심 · 이동성·일자리 민감",
-        "x": 68,
-        "y": 405,
-        "w": 255,
-        "h": 220,
-        "theme": "industry",
-        "base_icons": ["🏭", "🏢", "🏗️"],
-        "people": ["👷", "👩‍🏭", "🧑‍💼", "👨‍🔧"],
+        "icon": "🏭",
+        "desc": "근로자 중심 · 이동성·에너지·인프라 민감",
+        "x": 58,
+        "y": 150,
+        "w": 370,
+        "h": 330,
+        "people": ["👷", "👩‍🏭", "🧑‍💼", "👨‍🔧", "👩‍💼"],
         "weights": {
             "welfare": 0.45,
             "education": 0.35,
@@ -162,19 +155,15 @@ DISTRICT_INFO = {
             "safety": 0.85,
         },
     },
-
     "B구역(대학가)": {
-        "short": "B",
         "label": "B구역 대학가",
-        "main_icon": "🎓",
-        "desc": "학생 중심 · 교육·문화 민감",
-        "x": 328,
-        "y": 135,
-        "w": 275,
-        "h": 220,
-        "theme": "campus",
-        "base_icons": ["🏫", "🏛️", "🏠"],
-        "people": ["🧑‍🎓", "👩‍🎓", "🧑‍💻", "📚"],
+        "icon": "🎓",
+        "desc": "학생 중심 · 교육·문화·기회 민감",
+        "x": 470,
+        "y": 70,
+        "w": 370,
+        "h": 330,
+        "people": ["🧑‍🎓", "👩‍🎓", "🧑‍💻", "👨‍🎓", "👩‍💻"],
         "weights": {
             "welfare": 0.35,
             "education": 1.60,
@@ -183,19 +172,15 @@ DISTRICT_INFO = {
             "safety": 0.65,
         },
     },
-
     "C구역(복지타운)": {
-        "short": "C",
         "label": "C구역 복지타운",
-        "main_icon": "🏥",
+        "icon": "🏥",
         "desc": "노인·취약계층 중심 · 복지·안전 민감",
-        "x": 860,
-        "y": 130,
-        "w": 285,
-        "h": 235,
-        "theme": "welfare",
-        "base_icons": ["🏥", "🏘️", "🏠"],
-        "people": ["👵", "👴", "👩‍⚕️", "🧓"],
+        "x": 882,
+        "y": 110,
+        "w": 370,
+        "h": 330,
+        "people": ["👵", "👴", "👩‍⚕️", "🧓", "👨‍⚕️"],
         "weights": {
             "welfare": 1.65,
             "education": 0.35,
@@ -204,19 +189,15 @@ DISTRICT_INFO = {
             "safety": 1.10,
         },
     },
-
     "D구역(신도시)": {
-        "short": "D",
         "label": "D구역 신도시",
-        "main_icon": "🏙️",
+        "icon": "🏙️",
         "desc": "혼합형 시민 구성 · 균형 정책 반응",
-        "x": 555,
-        "y": 395,
-        "w": 300,
-        "h": 240,
-        "theme": "newtown",
-        "base_icons": ["🏙️", "🏢", "🏬"],
-        "people": ["👨‍👩‍👧", "🧑‍💼", "👩‍💻", "🧑"],
+        "x": 270,
+        "y": 520,
+        "w": 370,
+        "h": 330,
+        "people": ["👨‍👩‍👧", "🧑‍💼", "👩‍💻", "🧑", "👨‍👩‍👦"],
         "weights": {
             "welfare": 0.90,
             "education": 0.90,
@@ -225,19 +206,15 @@ DISTRICT_INFO = {
             "safety": 0.90,
         },
     },
-
     "E구역(구도심)": {
-        "short": "E",
         "label": "E구역 구도심",
-        "main_icon": "🏚️",
+        "icon": "🏘️",
         "desc": "노후 인프라 · 복지·안전·생활SOC 민감",
-        "x": 930,
-        "y": 430,
-        "w": 270,
-        "h": 225,
-        "theme": "oldtown",
-        "base_icons": ["🏚️", "🏠", "🏘️"],
-        "people": ["🧑", "👵", "👴", "👨‍👩‍👧"],
+        "x": 770,
+        "y": 540,
+        "w": 370,
+        "h": 330,
+        "people": ["🧑", "👵", "👴", "👨‍👩‍👧", "👩"],
         "weights": {
             "welfare": 1.15,
             "education": 0.55,
@@ -249,8 +226,165 @@ DISTRICT_INFO = {
 }
 
 
+BUDGET_ITEMS = {
+    "welfare": {
+        "name": "복지",
+        "item": "힐링 키트",
+        "icon": "💗",
+        "object": "🏥",
+        "color": "#1a7f37",
+        "desc": "의료, 돌봄, 복지관, 취약계층 지원",
+    },
+    "education": {
+        "name": "교육",
+        "item": "지식 스크롤",
+        "icon": "📘",
+        "object": "🏫",
+        "color": "#0969da",
+        "desc": "학교, 도서관, 직업훈련, 청년 기회",
+    },
+    "energy_infra": {
+        "name": "에너지 인프라",
+        "item": "스마트 배터리",
+        "icon": "🔋",
+        "object": "🔌",
+        "color": "#8250df",
+        "desc": "스마트그리드, 충전소, 친환경 기반시설",
+    },
+    "general_infra": {
+        "name": "일반 인프라",
+        "item": "도시 블록",
+        "icon": "🧱",
+        "object": "🏞️",
+        "color": "#d29922",
+        "desc": "도로, 버스, 공원, 생활SOC",
+    },
+    "safety": {
+        "name": "안전",
+        "item": "보호 방패",
+        "icon": "🛡️",
+        "object": "👮",
+        "color": "#cf222e",
+        "desc": "치안, 소방, CCTV, 재난 대응",
+    },
+}
+
+
+ENERGY_ITEMS = {
+    "solar": {
+        "name": "태양광",
+        "item": "태양 코어",
+        "icon": "☀️",
+        "object": "🔆",
+        "color": "#f59e0b",
+        "desc": "지붕형 패널과 분산 발전",
+    },
+    "hydrogen": {
+        "name": "수소연료전지",
+        "item": "수소 셀",
+        "icon": "💧",
+        "object": "⚗️",
+        "color": "#3b82f6",
+        "desc": "안정적인 도시 전력 생산",
+    },
+    "ess": {
+        "name": "ESS",
+        "item": "저장 배터리",
+        "icon": "🔋",
+        "object": "⚡",
+        "color": "#10b981",
+        "desc": "남는 전력을 저장하고 보완",
+    },
+    "external": {
+        "name": "외부전력망",
+        "item": "전력 타워",
+        "icon": "🗼",
+        "object": "🔌",
+        "color": "#6b7280",
+        "desc": "도시 외부 전력망 의존",
+    },
+}
+
+
 # ==================================================
-# 기존 dashboard.py와 동일한 도시 생성
+# Streamlit CSS
+# ==================================================
+st.markdown("""
+<style>
+.stApp {
+    background: #f7f8fb;
+    color: #1f2328;
+}
+
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #f6f8fa 0%, #ffffff 100%);
+    border-right: 1px solid #d0d7de;
+}
+
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] span {
+    color: #1f2328 !important;
+}
+
+.app-title {
+    font-size: 34px;
+    font-weight: 900;
+    color: #1f2328;
+    margin-bottom: 6px;
+}
+
+.app-subtitle {
+    font-size: 15px;
+    line-height: 1.7;
+    color: #57606a;
+    margin-bottom: 18px;
+}
+
+.box-info {
+    background: #ffffff;
+    border: 1px solid #d0d7de;
+    border-radius: 18px;
+    padding: 16px 18px;
+    box-shadow: 0 8px 20px rgba(27,31,36,0.05);
+    margin-bottom: 14px;
+}
+
+.box-warn {
+    background: #fff8c5;
+    border: 1px solid #f0d66b;
+    border-radius: 14px;
+    padding: 14px 16px;
+    color: #1f2328;
+    line-height: 1.6;
+    margin-bottom: 16px;
+}
+
+.ok-box {
+    background: rgba(26,127,55,0.08);
+    border: 1px solid rgba(26,127,55,0.25);
+    border-left: 4px solid #1a7f37;
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: #0f5323;
+    margin: 8px 0;
+}
+
+.err-box {
+    background: rgba(207,34,46,0.08);
+    border: 1px solid rgba(207,34,46,0.25);
+    border-left: 4px solid #cf222e;
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: #82071e;
+    margin: 8px 0;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+# ==================================================
+# 도시 모델
 # ==================================================
 @st.cache_resource
 def get_city():
@@ -302,15 +436,8 @@ def expected_energy_self_rate(solar, hydrogen, ess, external):
 
 
 def run_simulation_from_classes(
-    welfare,
-    education,
-    energy_infra,
-    general_infra,
-    safety,
-    solar,
-    hydrogen,
-    ess,
-    external,
+    welfare, education, energy_infra, general_infra, safety,
+    solar, hydrogen, ess, external
 ):
     if not HAS_CLASSES:
         return None, "classes.py를 불러오지 못했습니다."
@@ -345,34 +472,16 @@ def run_simulation_from_classes(
 
 
 def run_model_or_fallback(
-    welfare,
-    education,
-    energy_infra,
-    general_infra,
-    safety,
-    solar,
-    hydrogen,
-    ess,
-    external,
+    welfare, education, energy_infra, general_infra, safety,
+    solar, hydrogen, ess, external
 ):
     result, err = run_simulation_from_classes(
-        welfare,
-        education,
-        energy_infra,
-        general_infra,
-        safety,
-        solar,
-        hydrogen,
-        ess,
-        external,
+        welfare, education, energy_infra, general_infra, safety,
+        solar, hydrogen, ess, external
     )
 
     if result is not None:
-        scores = {
-            key: float(result["districts"][key])
-            for key in DISTRICT_KEYS
-        }
-
+        scores = {key: float(result["districts"][key]) for key in DISTRICT_KEYS}
         return {
             "scores": scores,
             "average": float(result["city_average"]),
@@ -380,68 +489,37 @@ def run_model_or_fallback(
             "savings": float(result["savings"]),
             "warnings": result.get("warnings", []),
             "source": "classes.py OOP 모델",
-            "raw_result": result,
         }
 
-    # 보조 계산: 실제 모델이 실패해도 발표 화면은 유지되도록 함
     energy_rate = expected_energy_self_rate(solar, hydrogen, ess, external)
     energy_bonus = (energy_rate - 0.4) * 18
 
     scores = {
         "A구역(산업단지)": (
-            42
-            + general_infra * 0.30
-            + energy_infra * 0.18
-            + safety * 0.15
-            + education * 0.08
-            + welfare * 0.05
-            + energy_bonus
+            42 + general_infra * 0.30 + energy_infra * 0.18 + safety * 0.15
+            + education * 0.08 + welfare * 0.05 + energy_bonus
         ),
         "B구역(대학가)": (
-            40
-            + education * 0.33
-            + general_infra * 0.14
-            + safety * 0.08
-            + energy_infra * 0.08
-            + welfare * 0.05
-            + energy_bonus
+            40 + education * 0.33 + general_infra * 0.14 + safety * 0.08
+            + energy_infra * 0.08 + welfare * 0.05 + energy_bonus
         ),
         "C구역(복지타운)": (
-            38
-            + welfare * 0.38
-            + safety * 0.18
-            + general_infra * 0.08
-            + education * 0.05
-            + energy_infra * 0.05
-            + energy_bonus
+            38 + welfare * 0.38 + safety * 0.18 + general_infra * 0.08
+            + education * 0.05 + energy_infra * 0.05 + energy_bonus
         ),
         "D구역(신도시)": (
-            43
-            + welfare * 0.16
-            + education * 0.16
-            + energy_infra * 0.16
-            + general_infra * 0.18
-            + safety * 0.14
-            + energy_bonus
+            43 + welfare * 0.16 + education * 0.16 + energy_infra * 0.16
+            + general_infra * 0.18 + safety * 0.14 + energy_bonus
         ),
         "E구역(구도심)": (
-            36
-            + welfare * 0.22
-            + safety * 0.22
-            + general_infra * 0.20
-            + education * 0.06
-            + energy_infra * 0.07
-            + energy_bonus
+            36 + welfare * 0.22 + safety * 0.22 + general_infra * 0.20
+            + education * 0.06 + energy_infra * 0.07 + energy_bonus
         ),
     }
 
-    scores = {
-        key: max(30, min(95, value))
-        for key, value in scores.items()
-    }
-
+    scores = {k: max(30, min(95, v)) for k, v in scores.items()}
     average = sum(scores.values()) / len(scores)
-    warnings = [key for key, value in scores.items() if value < 50]
+    warnings = [k for k, v in scores.items() if v < 50]
 
     return {
         "scores": scores,
@@ -449,14 +527,34 @@ def run_model_or_fallback(
         "independence": energy_rate,
         "savings": max(0, energy_rate - 0.4) * 0.05,
         "warnings": warnings,
-        "source": f"화면용 보조 계산 · 실제 모델 오류: {err}",
-        "raw_result": None,
+        "source": f"보조 계산 모델 · 실제 모델 오류: {err}",
     }
 
 
 # ==================================================
-# 시각화 유틸
+# 유틸
 # ==================================================
+def clamp(value, low, high):
+    return max(low, min(high, value))
+
+
+def item_level(value):
+    if value >= 35:
+        return "S"
+    if value >= 25:
+        return "A"
+    if value >= 15:
+        return "B"
+    if value > 0:
+        return "C"
+    return "-"
+
+
+def item_slots(value, max_slots=5):
+    filled = clamp(round(value / 20), 0, max_slots)
+    return filled
+
+
 def score_face(score):
     if score < 50:
         return "😟"
@@ -467,46 +565,131 @@ def score_face(score):
     return "😄"
 
 
-def score_mood(score):
+def score_label(score):
     if score < 50:
-        return "불안"
+        return "주의"
     if score < 60:
         return "보통"
     if score < 75:
         return "만족"
-    return "행복"
+    return "매우 만족"
 
 
 def score_color(score):
     if score < 50:
         return "#cf222e"
     if score < 60:
-        return "#9a6700"
+        return "#b07a12"
     if score < 75:
-        return "#0969da"
+        return "#2b6de0"
     return "#1a7f37"
 
 
-def clamp(value, low, high):
-    return max(low, min(high, value))
+def score_stars(score):
+    if score < 45:
+        return "★☆☆☆☆"
+    if score < 55:
+        return "★★☆☆☆"
+    if score < 70:
+        return "★★★☆☆"
+    if score < 82:
+        return "★★★★☆"
+    return "★★★★★"
 
 
-def icon_count(value, weight=1.0, max_icons=9, divisor=10):
-    count = round((value * weight) / divisor)
-    return clamp(count, 0, max_icons)
+def get_budget_values(welfare, education, energy_infra, general_infra, safety):
+    return {
+        "welfare": welfare,
+        "education": education,
+        "energy_infra": energy_infra,
+        "general_infra": general_infra,
+        "safety": safety,
+    }
+
+
+def get_energy_values(solar, hydrogen, ess, external):
+    return {
+        "solar": solar,
+        "hydrogen": hydrogen,
+        "ess": ess,
+        "external": external,
+    }
+
+
+def get_top_budget_items_for_district(district_key, budget_values):
+    weights = DISTRICT_INFO[district_key]["weights"]
+
+    weighted = []
+    for key, value in budget_values.items():
+        weighted.append((key, value, value * weights[key]))
+
+    weighted.sort(key=lambda x: x[2], reverse=True)
+    return weighted[:3]
+
+
+def get_facilities_for_district(district_key, budget_values):
+    weights = DISTRICT_INFO[district_key]["weights"]
+
+    position_list = [
+        (30, 106), (102, 106), (174, 106), (246, 106),
+        (48, 172), (120, 172), (192, 172), (264, 172),
+    ]
+
+    weighted_items = []
+    for key, value in budget_values.items():
+        item = BUDGET_ITEMS[key]
+        count = clamp(round((value * weights[key]) / 18), 1, 3)
+        for _ in range(count):
+            weighted_items.append((key, item["object"], item["name"], value * weights[key]))
+
+    weighted_items.sort(key=lambda x: x[3], reverse=True)
+    weighted_items = weighted_items[:8]
+
+    result = []
+    for idx, item in enumerate(weighted_items):
+        key, icon, name, _ = item
+        x, y = position_list[idx]
+        result.append((key, icon, name, x, y))
+
+    return result
+
+
+def resident_emojis_for_district(district_key, score):
+    info = DISTRICT_INFO[district_key]
+
+    if score < 50:
+        mood = "😟"
+    elif score < 60:
+        mood = "😐"
+    elif score < 75:
+        mood = "🙂"
+    else:
+        mood = "😄"
+
+    layout = [
+        (32, 246), (78, 244), (124, 249), (170, 245), (216, 248), (262, 245), (308, 247),
+        (52, 274), (108, 276), (164, 273), (220, 276), (276, 274),
+    ]
+
+    residents = []
+    for i, (x, y) in enumerate(layout):
+        person = info["people"][i % len(info["people"])]
+        residents.append((person, mood, x, y))
+
+    return residents
+
+
+def get_dashboard_url_from_secrets():
+    try:
+        return st.secrets.get("DASHBOARD_URL", "")
+    except Exception:
+        return ""
 
 
 def build_query_string(
     preset_choice,
-    welfare,
-    education,
-    energy_infra,
-    general_infra,
-    safety,
-    solar,
-    hydrogen,
-    ess,
-    external,
+    welfare, education, energy_infra, general_infra, safety,
+    solar, hydrogen, ess, external
 ):
     params = {
         "preset": preset_choice,
@@ -523,40 +706,23 @@ def build_query_string(
     return urllib.parse.urlencode(params)
 
 
-def get_dashboard_url_from_secrets():
-    try:
-        return st.secrets.get("DASHBOARD_URL", "")
-    except Exception:
-        return ""
-
-
 def make_dashboard_link(
     dashboard_url,
     preset_choice,
-    welfare,
-    education,
-    energy_infra,
-    general_infra,
-    safety,
-    solar,
-    hydrogen,
-    ess,
-    external,
+    welfare, education, energy_infra, general_infra, safety,
+    solar, hydrogen, ess, external
 ):
     if not dashboard_url:
-        return ""
+        return """
+        <div class="dash-link-empty">
+            2차 대시보드 URL을 입력하면 상세 분석 화면으로 바로 이동할 수 있습니다.
+        </div>
+        """
 
     query = build_query_string(
         preset_choice,
-        welfare,
-        education,
-        energy_infra,
-        general_infra,
-        safety,
-        solar,
-        hydrogen,
-        ess,
-        external,
+        welfare, education, energy_infra, general_infra, safety,
+        solar, hydrogen, ess, external
     )
 
     separator = "&" if "?" in dashboard_url else "?"
@@ -564,1597 +730,1183 @@ def make_dashboard_link(
     escaped = html_lib.escape(linked, quote=True)
 
     return f"""
-    <a class="dashboard-button" href="{escaped}" target="_blank">
+    <a class="dash-link-btn" href="{escaped}" target="_blank">
         📊 2차 상세 대시보드 열기
     </a>
     """
 
 
-def local_positions(count, width, height, start_x=18, start_y=36):
-    positions = []
-    if count <= 0:
-        return positions
-
-    cols = 4
-    gap_x = max(34, (width - 45) / cols)
-    gap_y = 39
-
-    for i in range(count):
-        col = i % cols
-        row = i // cols
-        x = start_x + col * gap_x + (row % 2) * 9
-        y = start_y + row * gap_y
-        x = min(width - 42, x)
-        y = min(height - 78, y)
-        positions.append((x, y))
-
-    return positions
+# ==================================================
+# HTML 생성 함수
+# ==================================================
+def make_item_slot_html(value, color):
+    filled = item_slots(value)
+    html = ""
+    for i in range(5):
+        cls = "slot active" if i < filled else "slot"
+        html += f'<span class="{cls}" style="--slot-color:{color};"></span>'
+    return html
 
 
-def make_building(
-    icon,
-    label,
-    x,
-    y,
-    delay,
-    category,
-    size="normal",
-):
-    return f"""
-    <div class="building building-{category} building-{size}"
-         style="left:{x:.1f}px; top:{y:.1f}px; animation-delay:{delay:.2f}s;"
-         title="{html_lib.escape(label)}">
-        <div class="building-shadow"></div>
-        <div class="building-icon">{icon}</div>
-    </div>
-    """
+def make_budget_inventory_html(budget_values):
+    html = ""
+    for key, value in budget_values.items():
+        item = BUDGET_ITEMS[key]
+        level = item_level(value)
+        slots = make_item_slot_html(value, item["color"])
 
-
-def make_district_buildings(
-    district_key,
-    welfare,
-    education,
-    energy_infra,
-    general_infra,
-    safety,
-    idx,
-):
-    info = DISTRICT_INFO[district_key]
-    weights = info["weights"]
-    w = info["w"]
-    h = info["h"]
-
-    buildings = []
-
-    base_positions = local_positions(3, w, h, start_x=18, start_y=34)
-    for i, (x, y) in enumerate(base_positions):
-        icon = info["base_icons"][i % len(info["base_icons"])]
-        buildings.append(
-            make_building(
-                icon=icon,
-                label=f"{info['label']} 기본 건물",
-                x=x,
-                y=y,
-                delay=0.4 + idx * 0.08 + i * 0.12,
-                category="base",
-                size="large",
-            )
-        )
-
-    categories = [
-        {
-            "name": "welfare",
-            "value": welfare,
-            "weight": weights["welfare"],
-            "icons": ["🏥", "👩‍⚕️", "🏘️", "🤝"],
-            "label": "복지 시설",
-            "delay": 1.4,
-            "start_x": 20,
-            "start_y": 102,
-        },
-        {
-            "name": "education",
-            "value": education,
-            "weight": weights["education"],
-            "icons": ["🏫", "📚", "🎓", "🏛️"],
-            "label": "교육 시설",
-            "delay": 2.2,
-            "start_x": 70,
-            "start_y": 100,
-        },
-        {
-            "name": "energy",
-            "value": energy_infra,
-            "weight": weights["energy_infra"],
-            "icons": ["🔌", "📡", "🚗", "💡"],
-            "label": "에너지 인프라",
-            "delay": 3.0,
-            "start_x": 122,
-            "start_y": 98,
-        },
-        {
-            "name": "infra",
-            "value": general_infra,
-            "weight": weights["general_infra"],
-            "icons": ["🌳", "🚏", "🏞️", "🚌", "🛣️"],
-            "label": "생활 인프라",
-            "delay": 3.8,
-            "start_x": 40,
-            "start_y": 154,
-        },
-        {
-            "name": "safety",
-            "value": safety,
-            "weight": weights["safety"],
-            "icons": ["👮", "📹", "🚒", "🚓", "🛡️"],
-            "label": "안전 시설",
-            "delay": 4.6,
-            "start_x": 104,
-            "start_y": 154,
-        },
-    ]
-
-    for cat in categories:
-        count = icon_count(cat["value"], cat["weight"], max_icons=7, divisor=10)
-        positions = local_positions(
-            count,
-            w,
-            h,
-            start_x=cat["start_x"],
-            start_y=cat["start_y"],
-        )
-        icon_cycle = cycle(cat["icons"])
-
-        for j, (x, y) in enumerate(positions):
-            buildings.append(
-                make_building(
-                    icon=next(icon_cycle),
-                    label=cat["label"],
-                    x=x,
-                    y=y,
-                    delay=cat["delay"] + idx * 0.10 + j * 0.09,
-                    category=cat["name"],
-                )
-            )
-
-    return "".join(buildings)
-
-
-def make_citizens_for_district(district_key, score, idx):
-    info = DISTRICT_INFO[district_key]
-    people_cycle = cycle(info["people"])
-    face = score_face(score)
-    color = score_color(score)
-
-    citizens = []
-
-    for i in range(9):
-        person = next(people_cycle)
-        delay = 6.8 + idx * 0.18 + i * 0.14
-        x = 18 + (i * 23) % max(120, info["w"] - 40)
-        y = info["h"] - 54 - (i % 3) * 10
-        walk = 14 + (i % 4) * 8
-
-        citizens.append(
-            f"""
-            <div class="villager"
-                 style="
-                    left:{x:.1f}px;
-                    top:{y:.1f}px;
-                    --walk:{walk}px;
-                    --mood-color:{color};
-                    animation-delay:{delay:.2f}s;
-                 ">
-                <div class="villager-face">{person}</div>
-                <div class="villager-mood">{face}</div>
+        html += f"""
+        <div class="inventory-card" style="--item-color:{item['color']};">
+            <div class="item-main">
+                <div class="item-orb">{item['icon']}</div>
+                <div class="item-text">
+                    <div class="item-name">{item['item']}</div>
+                    <div class="item-type">{item['name']} 정책 아이템</div>
+                </div>
+                <div class="item-rank">Lv.{level}</div>
             </div>
-            """
-        )
+            <div class="item-desc">{item['desc']}</div>
+            <div class="item-bottom">
+                <div class="item-percent">{value}%</div>
+                <div class="item-slots">{slots}</div>
+            </div>
+        </div>
+        """
+    return html
 
-    return "".join(citizens)
+
+def make_energy_inventory_html(energy_values):
+    html = ""
+    for key, value in energy_values.items():
+        item = ENERGY_ITEMS[key]
+        level = item_level(value)
+        slots = make_item_slot_html(value, item["color"])
+
+        html += f"""
+        <div class="inventory-card energy-item" style="--item-color:{item['color']};">
+            <div class="item-main">
+                <div class="item-orb">{item['icon']}</div>
+                <div class="item-text">
+                    <div class="item-name">{item['item']}</div>
+                    <div class="item-type">{item['name']} 에너지 아이템</div>
+                </div>
+                <div class="item-rank">Lv.{level}</div>
+            </div>
+            <div class="item-desc">{item['desc']}</div>
+            <div class="item-bottom">
+                <div class="item-percent">{value}%</div>
+                <div class="item-slots">{slots}</div>
+            </div>
+        </div>
+        """
+    return html
 
 
-def make_district_zone(
+def make_applied_item_html(district_key, budget_values):
+    top_items = get_top_budget_items_for_district(district_key, budget_values)
+
+    html = ""
+    for key, value, weighted_value in top_items:
+        item = BUDGET_ITEMS[key]
+        power = clamp(round(weighted_value), 0, 100)
+        html += f"""
+        <div class="applied-item" style="--item-color:{item['color']};">
+            <div class="applied-icon">{item['icon']}</div>
+            <div class="applied-text">
+                <div class="applied-name">{item['item']}</div>
+                <div class="applied-sub">적용 강도 {power}</div>
+            </div>
+        </div>
+        """
+    return html
+
+
+def make_district_card_html(
     district_key,
     score,
-    welfare,
-    education,
-    energy_infra,
-    general_infra,
-    safety,
-    idx,
+    budget_values
 ):
     info = DISTRICT_INFO[district_key]
     color = score_color(score)
     face = score_face(score)
-    mood = score_mood(score)
+    label = score_label(score)
+    stars = score_stars(score)
 
-    buildings = make_district_buildings(
-        district_key,
-        welfare,
-        education,
-        energy_infra,
-        general_infra,
-        safety,
-        idx,
-    )
+    applied_items_html = make_applied_item_html(district_key, budget_values)
 
-    citizens = make_citizens_for_district(district_key, score, idx)
+    facilities = get_facilities_for_district(district_key, budget_values)
+    residents = resident_emojis_for_district(district_key, score)
+
+    facility_html = ""
+    for key, icon, name, x, y in facilities:
+        item = BUDGET_ITEMS[key]
+        facility_html += f"""
+        <div class="facility-item" style="left:{x}px; top:{y}px; --item-color:{item['color']};">
+            <div class="facility-emoji">{icon}</div>
+            <div class="facility-caption">{name}</div>
+        </div>
+        """
+
+    resident_html = ""
+    for person, mood, x, y in residents:
+        resident_html += f"""
+        <div class="resident-item" style="left:{x}px; top:{y}px;">
+            <div class="resident-person">{person}</div>
+            <div class="resident-mood">{mood}</div>
+        </div>
+        """
 
     return f"""
-    <div class="district-zone zone-{idx + 1}"
-         style="
-            left:{info['x']}px;
-            top:{info['y']}px;
-            width:{info['w']}px;
-            height:{info['h']}px;
-         ">
-        <div class="zone-label">
-            <div class="zone-main-icon">{info['main_icon']}</div>
-            <div>
-                <div class="zone-title">{info['label']}</div>
-                <div class="zone-desc">{info['desc']}</div>
+    <div class="district-card"
+         style="left:{info['x']}px; top:{info['y']}px; width:{info['w']}px; height:{info['h']}px;">
+
+        <div class="district-header">
+            <div class="district-icon">{info['icon']}</div>
+            <div class="district-head-text">
+                <div class="district-title">{info['label']}</div>
+                <div class="district-desc">{info['desc']}</div>
             </div>
         </div>
 
-        <div class="zone-ground">
-            <div class="mini-road road-horizontal"></div>
-            <div class="mini-road road-vertical"></div>
-            {buildings}
-            {citizens}
+        <div class="applied-panel">
+            <div class="applied-title">적용된 정책 아이템</div>
+            <div class="applied-list">
+                {applied_items_html}
+            </div>
         </div>
 
-        <div class="zone-score">
-            <div class="score-face">{face}</div>
-            <div class="score-mid">
-                <div class="score-label">시민 만족도 · {mood}</div>
-                <div class="score-bar">
-                    <div class="score-fill"
-                         style="--score-width:{score:.1f}%; --score-color:{color};">
+        <div class="district-inner-road road-1"></div>
+        <div class="district-inner-road road-2"></div>
+
+        {facility_html}
+        {resident_html}
+
+        <div class="district-score-panel">
+            <div class="score-left">
+                <div class="score-face-big">{face}</div>
+            </div>
+
+            <div class="score-center">
+                <div class="score-top-row">
+                    <span class="score-state">{label}</span>
+                    <span class="score-stars">{stars}</span>
+                </div>
+                <div class="score-bar-wrap">
+                    <div class="score-bar-bg">
+                        <div class="score-bar-fill"
+                             style="width:{score:.1f}%; background:{color};"></div>
                     </div>
                 </div>
+                <div class="score-sub">시민 만족도</div>
             </div>
-            <div class="score-num" style="color:{color};">{score:.1f}</div>
+
+            <div class="score-right" style="color:{color};">
+                {score:.1f}
+            </div>
         </div>
     </div>
     """
 
 
-def make_vehicle_stream(general_infra, safety):
-    bus_count = icon_count(general_infra, 1.0, max_icons=5, divisor=16)
-    police_count = icon_count(safety, 1.0, max_icons=4, divisor=18)
+def make_energy_object_field_html(energy_values):
+    positions = {
+        "solar": [(42, 72), (102, 72), (162, 72), (222, 72), (282, 72)],
+        "hydrogen": [(42, 154), (102, 154), (162, 154), (222, 154), (282, 154)],
+        "ess": [(42, 236), (102, 236), (162, 236), (222, 236), (282, 236)],
+        "external": [(42, 318), (102, 318), (162, 318), (222, 318), (282, 318)],
+    }
 
     html = ""
-
-    for i in range(bus_count):
-        delay = i * 1.25
-        html += f"""
-        <div class="world-vehicle bus"
-             style="top:{392 + (i % 2) * 26}px; animation-delay:{delay:.2f}s;">
-            🚌
-        </div>
-        """
-
-    for i in range(police_count):
-        delay = 0.7 + i * 1.35
-        html += f"""
-        <div class="world-vehicle police"
-             style="top:{642 + (i % 2) * 22}px; animation-delay:{delay:.2f}s;">
-            🚓
-        </div>
-        """
-
-    return html
-
-
-def make_energy_facility_icon(icon, label, x, y, delay):
-    return f"""
-    <div class="energy-building"
-         style="left:{x}px; top:{y}px; animation-delay:{delay:.2f}s;"
-         title="{html_lib.escape(label)}">
-        <div class="energy-building-icon">{icon}</div>
-    </div>
-    """
-
-
-def make_energy_world(solar, hydrogen, ess, external):
-    html = ""
-
-    solar_count = icon_count(solar, 1.15, max_icons=9, divisor=9)
-    hydrogen_count = icon_count(hydrogen, 1.15, max_icons=8, divisor=9)
-    ess_count = icon_count(ess, 1.20, max_icons=8, divisor=9)
-    external_count = icon_count(external, 1.0, max_icons=7, divisor=10)
-
-    for i in range(solar_count):
-        x = 55 + (i % 5) * 44
-        y = 72 + (i // 5) * 42
-        html += make_energy_facility_icon("☀️", "태양광 설비", x, y, 5.3 + i * 0.08)
-
-    for i in range(hydrogen_count):
-        x = 965 + (i % 4) * 48
-        y = 58 + (i // 4) * 44
-        html += make_energy_facility_icon("💧", "수소연료전지", x, y, 5.7 + i * 0.08)
-
-    for i in range(ess_count):
-        x = 1040 + (i % 4) * 42
-        y = 715 + (i // 4) * 38
-        html += make_energy_facility_icon("🔋", "ESS 저장소", x, y, 6.1 + i * 0.08)
-
-    for i in range(external_count):
-        x = 55 + (i % 4) * 46
-        y = 712 + (i // 4) * 40
-        html += make_energy_facility_icon("🗼", "외부전력망", x, y, 6.5 + i * 0.08)
-
-    return html
-
-
-def make_need_summary_cards(welfare, education, energy_infra, general_infra, safety):
-    items = [
-        ("복지", welfare, "🏥", "병원·돌봄센터·복지관"),
-        ("교육", education, "🏫", "학교·도서관·평생학습"),
-        ("에너지 인프라", energy_infra, "🔌", "충전소·스마트그리드"),
-        ("일반 인프라", general_infra, "🚌", "도로·버스·공원"),
-        ("안전", safety, "👮", "경찰·CCTV·소방"),
-    ]
-
-    html = ""
-
-    for label, value, icon, desc in items:
-        html += f"""
-        <div class="policy-card">
-            <div class="policy-icon">{icon}</div>
-            <div class="policy-name">{label}</div>
-            <div class="policy-value">{value}%</div>
-            <div class="policy-bar">
-                <div class="policy-fill" style="width:{value}%;"></div>
+    for key, value in energy_values.items():
+        item = ENERGY_ITEMS[key]
+        count = clamp(round(value / 20), 0, 5)
+        for i in range(count):
+            x, y = positions[key][i]
+            html += f"""
+            <div class="energy-object" style="left:{x}px; top:{y}px; --item-color:{item['color']};">
+                <div class="energy-object-icon">{item['object']}</div>
+                <div class="energy-object-name">{item['name']}</div>
             </div>
-            <div class="policy-desc">{desc}</div>
-        </div>
-        """
+            """
 
     return html
 
 
-def make_energy_summary_cards(solar, hydrogen, ess, external):
-    items = [
-        ("태양광", solar, "☀️", "지붕형 패널·분산 발전"),
-        ("수소연료전지", hydrogen, "💧", "안정형 발전 설비"),
-        ("ESS", ess, "🔋", "에너지 저장 시설"),
-        ("외부전력망", external, "🗼", "도시 외부 의존"),
-    ]
-
-    html = ""
-
-    for label, value, icon, desc in items:
-        html += f"""
-        <div class="energy-policy-card">
-            <div class="policy-icon">{icon}</div>
-            <div class="policy-name">{label}</div>
-            <div class="policy-value">{value}%</div>
-            <div class="policy-bar">
-                <div class="policy-fill energy-fill" style="width:{value}%;"></div>
-            </div>
-            <div class="policy-desc">{desc}</div>
-        </div>
-        """
-
-    return html
-
-
-def make_game_html(
+def make_main_scene_html(
     preset_choice,
-    welfare,
-    education,
-    energy_infra,
-    general_infra,
-    safety,
-    solar,
-    hydrogen,
-    ess,
-    external,
-    model_result,
-    dashboard_url,
+    welfare, education, energy_infra, general_infra, safety,
+    solar, hydrogen, ess, external,
+    result,
+    dashboard_url
 ):
-    scores = model_result["scores"]
-    avg = model_result["average"]
-    independence = model_result["independence"]
-    savings = model_result["savings"]
-    warnings = model_result["warnings"]
-    model_source = model_result["source"]
+    budget_values = get_budget_values(welfare, education, energy_infra, general_infra, safety)
+    energy_values = get_energy_values(solar, hydrogen, ess, external)
 
-    district_html = ""
-    for idx, key in enumerate(DISTRICT_KEYS):
-        district_html += make_district_zone(
+    avg = result["average"]
+    independence = result["independence"]
+    warnings = result["warnings"]
+    savings = result["savings"]
+    source = result["source"]
+
+    district_cards = ""
+    for key in DISTRICT_KEYS:
+        district_cards += make_district_card_html(
             key,
-            scores[key],
-            welfare,
-            education,
-            energy_infra,
-            general_infra,
-            safety,
-            idx,
+            result["scores"][key],
+            budget_values
         )
 
-    vehicles = make_vehicle_stream(general_infra, safety)
-    energy_world = make_energy_world(solar, hydrogen, ess, external)
-
-    warning_text = f"{len(warnings)}개 구역 주의" if warnings else "위험 구역 없음"
-    warning_color = "#cf222e" if warnings else "#1a7f37"
+    budget_inventory = make_budget_inventory_html(budget_values)
+    energy_inventory = make_energy_inventory_html(energy_values)
+    energy_objects = make_energy_object_field_html(energy_values)
 
     dashboard_button = make_dashboard_link(
         dashboard_url,
         preset_choice,
-        welfare,
-        education,
-        energy_infra,
-        general_infra,
-        safety,
-        solar,
-        hydrogen,
-        ess,
-        external,
+        welfare, education, energy_infra, general_infra, safety,
+        solar, hydrogen, ess, external
     )
 
-    if not dashboard_button:
-        dashboard_button = """
-        <div class="dashboard-empty">
-            왼쪽 사이드바의 2차 대시보드 URL에 기존 대시보드 주소를 입력하면 이동 버튼이 생성됩니다.
-        </div>
-        """
+    warning_text = "위험 구역 없음" if not warnings else f"주의 구역 {len(warnings)}개"
+    warning_color = "#1a7f37" if not warnings else "#cf222e"
 
-    policy_cards = make_need_summary_cards(
-        welfare,
-        education,
-        energy_infra,
-        general_infra,
-        safety,
-    )
-
-    energy_cards = make_energy_summary_cards(
-        solar,
-        hydrogen,
-        ess,
-        external,
-    )
-
-    css = """
+    html = f"""
     <style>
-    :root {
-        --ink: #1f2328;
-        --muted: #57606a;
-        --line: #d0d7de;
-        --blue: #0969da;
-        --green: #1a7f37;
-        --red: #cf222e;
-        --yellow: #9a6700;
-        --purple: #8250df;
-        --sky: #ddf4ff;
-        --grass: #a8db98;
-        --grass2: #b7e4a8;
-        --road: #6e7781;
-        --water: #74c0fc;
-    }
-
-    * {
+    * {{
         box-sizing: border-box;
-    }
-
-    body {
-        margin: 0;
-        background: #ffffff;
-        color: var(--ink);
         font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
+    }}
 
-    .game-root {
+    body {{
+        margin: 0;
+        background: #f7f8fb;
+    }}
+
+    .root {{
         width: 100%;
-        padding: 4px 6px 44px;
-    }
+        padding: 10px 8px 28px;
+        color: #1f2328;
+    }}
 
-    .game-top {
+    .hero {{
+        background:
+            radial-gradient(circle at 15% 20%, rgba(255,255,255,0.22), transparent 18%),
+            radial-gradient(circle at 82% 18%, rgba(255,255,255,0.18), transparent 22%),
+            linear-gradient(135deg, #91552e 0%, #c97b3d 45%, #e5a44f 100%);
+        border-radius: 28px;
+        padding: 28px 30px;
+        color: white;
         position: relative;
         overflow: hidden;
-        border-radius: 30px;
-        min-height: 250px;
-        padding: 32px 36px;
-        color: white;
-        background:
-            radial-gradient(circle at 12% 25%, rgba(255,255,255,0.20), transparent 18%),
-            radial-gradient(circle at 88% 20%, rgba(255,255,255,0.16), transparent 20%),
-            linear-gradient(135deg, #9a5a2f 0%, #c77936 42%, #e2a24d 100%);
-        box-shadow: 0 18px 42px rgba(163,101,47,0.22);
+        box-shadow: 0 18px 34px rgba(145,85,46,0.22);
         margin-bottom: 18px;
-    }
+    }}
 
-    .wood-plank {
+    .hero::after {{
+        content: "";
         position: absolute;
         inset: 0;
         background:
-            repeating-linear-gradient(
-                165deg,
-                rgba(255,255,255,0.06) 0 8px,
-                rgba(0,0,0,0.04) 8px 18px
-            );
+            repeating-linear-gradient(165deg,
+                rgba(255,255,255,0.05) 0 8px,
+                rgba(0,0,0,0.03) 8px 18px);
         pointer-events: none;
-    }
+    }}
 
-    .top-content {
+    .hero-content {{
         position: relative;
         z-index: 2;
         display: grid;
-        grid-template-columns: 1.45fr 1fr;
-        gap: 20px;
+        grid-template-columns: 1.5fr 1fr;
+        gap: 18px;
         align-items: center;
-    }
+    }}
 
-    .game-eyebrow {
-        font-size: 13px;
-        font-weight: 950;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
-        opacity: 0.90;
-        margin-bottom: 8px;
-    }
-
-    .game-title {
-        font-size: 42px;
-        font-weight: 950;
-        line-height: 1.16;
-        text-shadow: 0 3px 0 rgba(0,0,0,0.15);
-        margin-bottom: 10px;
-    }
-
-    .game-desc {
-        max-width: 900px;
-        font-size: 16px;
-        line-height: 1.7;
-        opacity: 0.96;
-    }
-
-    .resource-panel {
-        background: rgba(255,255,255,0.18);
-        border: 1px solid rgba(255,255,255,0.28);
-        border-radius: 24px;
-        padding: 18px;
-        backdrop-filter: blur(6px);
-    }
-
-    .resource-row {
-        display: grid;
-        grid-template-columns: 42px 1fr 88px;
-        align-items: center;
-        gap: 10px;
-        padding: 8px 0;
-        border-bottom: 1px solid rgba(255,255,255,0.18);
-    }
-
-    .resource-row:last-child {
-        border-bottom: none;
-    }
-
-    .resource-icon {
-        width: 38px;
-        height: 38px;
-        border-radius: 14px;
-        background: rgba(255,255,255,0.22);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 22px;
-    }
-
-    .resource-name {
+    .hero-eyebrow {{
         font-size: 13px;
         font-weight: 900;
-    }
-
-    .resource-value {
-        text-align: right;
-        font-size: 18px;
-        font-weight: 950;
-    }
-
-    .hud-grid {
-        display: grid;
-        grid-template-columns: 1.2fr 1fr 1fr 1fr;
-        gap: 14px;
-        margin-bottom: 18px;
-    }
-
-    .hud-card {
-        background: #ffffff;
-        border: 1px solid var(--line);
-        border-radius: 22px;
-        padding: 18px 20px;
-        min-height: 118px;
-        box-shadow: 0 10px 26px rgba(27,31,36,0.07);
-        animation: uiPop 0.7s ease both;
-    }
-
-    .hud-card:nth-child(1) { animation-delay: 0.1s; }
-    .hud-card:nth-child(2) { animation-delay: 0.2s; }
-    .hud-card:nth-child(3) { animation-delay: 0.3s; }
-    .hud-card:nth-child(4) { animation-delay: 0.4s; }
-
-    @keyframes uiPop {
-        from { transform: translateY(16px); opacity: 0; }
-        to { transform: translateY(0); opacity: 1; }
-    }
-
-    .hud-label {
-        font-size: 12px;
-        font-weight: 950;
-        color: #656d76;
+        letter-spacing: 0.14em;
         text-transform: uppercase;
-        letter-spacing: 0.08em;
+        opacity: 0.9;
         margin-bottom: 8px;
-    }
+    }}
 
-    .hud-value {
-        font-size: 30px;
-        font-weight: 950;
-        color: var(--blue);
-        line-height: 1.05;
-    }
+    .hero-title {{
+        font-size: 40px;
+        font-weight: 900;
+        line-height: 1.18;
+        margin-bottom: 10px;
+        text-shadow: 0 2px 0 rgba(0,0,0,0.14);
+    }}
 
-    .hud-sub {
-        font-size: 13px;
-        color: var(--muted);
-        line-height: 1.5;
-        margin-top: 8px;
-    }
+    .hero-desc {{
+        font-size: 16px;
+        line-height: 1.75;
+        opacity: 0.96;
+    }}
 
-    .quest-panel {
-        background: #fff8c5;
-        border: 1px solid #f0d66b;
+    .hero-panel {{
+        background: rgba(255,255,255,0.16);
+        border: 1px solid rgba(255,255,255,0.24);
         border-radius: 22px;
         padding: 16px 18px;
-        margin-bottom: 18px;
-        display: grid;
-        grid-template-columns: 54px 1fr;
-        gap: 12px;
-        align-items: center;
-        box-shadow: 0 10px 24px rgba(210,153,34,0.10);
-    }
+        backdrop-filter: blur(4px);
+    }}
 
-    .quest-icon {
-        width: 52px;
-        height: 52px;
-        border-radius: 18px;
-        background: #ffffff;
-        border: 1px solid #f0d66b;
+    .hero-stat {{
         display: flex;
+        justify-content: space-between;
         align-items: center;
-        justify-content: center;
-        font-size: 28px;
-    }
+        padding: 10px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.16);
+    }}
 
-    .quest-title {
-        font-size: 17px;
-        font-weight: 950;
-        color: var(--ink);
-        margin-bottom: 4px;
-    }
+    .hero-stat:last-child {{
+        border-bottom: none;
+    }}
 
-    .quest-desc {
+    .hero-stat-name {{
+        font-size: 13px;
+        font-weight: 800;
+    }}
+
+    .hero-stat-value {{
+        font-size: 18px;
+        font-weight: 900;
+    }}
+
+    .hud-grid {{
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+        margin-bottom: 18px;
+    }}
+
+    .hud-card {{
+        background: #ffffff;
+        border: 1px solid #d0d7de;
+        border-radius: 22px;
+        padding: 18px 20px;
+        min-height: 116px;
+        box-shadow: 0 10px 20px rgba(27,31,36,0.06);
+    }}
+
+    .hud-label {{
+        font-size: 12px;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #656d76;
+        margin-bottom: 8px;
+    }}
+
+    .hud-value {{
+        font-size: 30px;
+        font-weight: 900;
+        color: #0969da;
+        line-height: 1.05;
+    }}
+
+    .hud-sub {{
+        font-size: 13px;
+        color: #57606a;
+        line-height: 1.55;
+        margin-top: 8px;
+    }}
+
+    .section-title {{
+        font-size: 24px;
+        font-weight: 900;
+        margin-bottom: 6px;
+        color: #1f2328;
+    }}
+
+    .section-sub {{
         font-size: 14px;
-        color: var(--muted);
-        line-height: 1.6;
-    }
+        color: #57606a;
+        line-height: 1.65;
+        margin-bottom: 14px;
+    }}
 
-    .policy-summary-grid {
+    .inventory-grid {{
         display: grid;
         grid-template-columns: repeat(5, 1fr);
         gap: 12px;
-        margin-bottom: 18px;
-    }
+        margin-bottom: 22px;
+    }}
 
-    .policy-card,
-    .energy-policy-card {
-        background: #ffffff;
-        border: 1px solid var(--line);
-        border-radius: 18px;
-        padding: 14px 14px;
-        min-height: 142px;
-        box-shadow: 0 8px 20px rgba(27,31,36,0.05);
-    }
+    .inventory-grid.energy {{
+        grid-template-columns: repeat(4, 1fr);
+    }}
 
-    .policy-icon {
-        font-size: 26px;
-        margin-bottom: 6px;
-    }
-
-    .policy-name {
-        font-size: 13px;
-        font-weight: 950;
-        color: var(--ink);
-        margin-bottom: 4px;
-    }
-
-    .policy-value {
-        font-size: 22px;
-        font-weight: 950;
-        color: var(--blue);
-        margin-bottom: 8px;
-    }
-
-    .policy-bar {
-        height: 8px;
-        background: #d0d7de;
-        border-radius: 999px;
+    .inventory-card {{
+        background:
+            linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.92));
+        border: 1px solid #d0d7de;
+        border-top: 4px solid var(--item-color);
+        border-radius: 20px;
+        padding: 14px;
+        box-shadow: 0 10px 18px rgba(27,31,36,0.06);
+        position: relative;
         overflow: hidden;
-        margin-bottom: 7px;
-    }
+    }}
 
-    .policy-fill {
-        height: 100%;
-        background: linear-gradient(90deg, #0969da, #8250df);
-        border-radius: 999px;
-    }
+    .inventory-card::after {{
+        content: "";
+        position: absolute;
+        right: -32px;
+        top: -32px;
+        width: 88px;
+        height: 88px;
+        border-radius: 50%;
+        background: var(--item-color);
+        opacity: 0.08;
+    }}
 
-    .energy-fill {
-        background: linear-gradient(90deg, #1a7f37, #d29922);
-    }
+    .item-main {{
+        display: grid;
+        grid-template-columns: 48px 1fr 50px;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+    }}
 
-    .policy-desc {
+    .item-orb {{
+        width: 48px;
+        height: 48px;
+        border-radius: 17px;
+        background: var(--item-color);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 27px;
+        box-shadow: 0 8px 16px color-mix(in srgb, var(--item-color) 35%, transparent);
+    }}
+
+    .item-name {{
+        font-size: 15px;
+        font-weight: 900;
+        color: #1f2328;
+        margin-bottom: 2px;
+    }}
+
+    .item-type {{
         font-size: 11px;
-        color: var(--muted);
-        line-height: 1.45;
-    }
+        color: #57606a;
+        line-height: 1.35;
+    }}
 
-    .section-heading {
+    .item-rank {{
+        background: var(--item-color);
+        color: white;
+        border-radius: 999px;
+        padding: 5px 8px;
+        font-size: 11px;
+        font-weight: 900;
+        text-align: center;
+    }}
+
+    .item-desc {{
+        font-size: 12px;
+        color: #57606a;
+        line-height: 1.5;
+        min-height: 38px;
+        margin-bottom: 10px;
+    }}
+
+    .item-bottom {{
         display: flex;
         justify-content: space-between;
-        align-items: flex-end;
-        gap: 16px;
-        margin-bottom: 14px;
-    }
+        align-items: center;
+        gap: 8px;
+    }}
 
-    .section-title {
-        font-size: 25px;
-        font-weight: 950;
-        color: var(--ink);
-        margin-bottom: 5px;
-    }
+    .item-percent {{
+        font-size: 22px;
+        font-weight: 900;
+        color: var(--item-color);
+    }}
 
-    .section-subtitle {
-        font-size: 14px;
-        color: var(--muted);
-        line-height: 1.6;
-    }
+    .item-slots {{
+        display: flex;
+        gap: 4px;
+    }}
 
-    .world-board {
+    .slot {{
+        width: 12px;
+        height: 12px;
+        border-radius: 4px;
+        background: #e5e7eb;
+    }}
+
+    .slot.active {{
+        background: var(--slot-color);
+        box-shadow: 0 0 0 2px color-mix(in srgb, var(--slot-color) 18%, transparent);
+    }}
+
+    .world-scroll {{
+        width: 100%;
+        overflow-x: auto;
+        padding-bottom: 8px;
+    }}
+
+    .world {{
         position: relative;
-        width: 1280px;
-        height: 860px;
+        width: 1320px;
+        height: 950px;
+        border-radius: 32px;
         overflow: hidden;
-        border: 1px solid var(--line);
-        border-radius: 34px;
-        margin-bottom: 24px;
+        border: 1px solid #d0d7de;
         background:
-            linear-gradient(180deg, #ddf4ff 0%, #ecf8ff 22%, #eaf8e1 55%, #cce6b6 100%);
-        box-shadow:
-            inset 0 0 0 1px rgba(255,255,255,0.8),
-            0 18px 42px rgba(27,31,36,0.10);
-    }
+            linear-gradient(180deg, #dff2ff 0%, #eef8ff 18%, #eef6e7 55%, #dfeccc 100%);
+        box-shadow: 0 18px 34px rgba(27,31,36,0.08);
+    }}
 
-    .world-board::before {
-        content: "☀️";
+    .sun {{
         position: absolute;
-        top: 22px;
         right: 34px;
-        font-size: 62px;
-        animation: sunSpin 14s linear infinite;
-        z-index: 4;
-    }
+        top: 26px;
+        font-size: 58px;
+        z-index: 2;
+    }}
 
-    @keyframes sunSpin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-    }
-
-    .mountain {
+    .cloud {{
         position: absolute;
-        font-size: 82px;
-        opacity: 0.88;
+        font-size: 40px;
+        opacity: 0.75;
         z-index: 1;
-        filter: drop-shadow(0 8px 8px rgba(27,31,36,0.12));
-    }
+    }}
 
-    .mountain.m1 { left: 1010px; top: 12px; }
-    .mountain.m2 { left: 1070px; top: 6px; }
-    .mountain.m3 { left: 1140px; top: 20px; }
+    .cloud.c1 {{ left: 90px; top: 32px; }}
+    .cloud.c2 {{ left: 420px; top: 52px; }}
+    .cloud.c3 {{ left: 760px; top: 26px; }}
 
-    .cloud {
+    .mountain {{
         position: absolute;
-        font-size: 42px;
-        opacity: 0.72;
-        z-index: 3;
-        animation: cloudMove 12s ease-in-out infinite alternate;
-    }
+        font-size: 90px;
+        opacity: 0.85;
+        z-index: 1;
+    }}
 
-    .cloud.c1 { left: 110px; top: 48px; }
-    .cloud.c2 { left: 520px; top: 70px; animation-delay: 1.5s; }
-    .cloud.c3 { left: 795px; top: 35px; animation-delay: 2.3s; }
+    .m1 {{ right: 150px; top: 28px; }}
+    .m2 {{ right: 90px; top: 18px; }}
+    .m3 {{ right: 30px; top: 32px; }}
 
-    @keyframes cloudMove {
-        from { transform: translateX(0); }
-        to { transform: translateX(48px); }
-    }
-
-    .river {
+    .river {{
         position: absolute;
-        left: -80px;
-        top: 610px;
-        width: 1500px;
-        height: 88px;
+        left: -50px;
+        bottom: 30px;
+        width: 1450px;
+        height: 84px;
+        transform: rotate(-6deg);
         background:
             repeating-linear-gradient(
-                115deg,
-                rgba(255,255,255,0.35) 0 10px,
-                rgba(255,255,255,0.05) 10px 22px
+                120deg,
+                rgba(255,255,255,0.32) 0 12px,
+                rgba(255,255,255,0.08) 12px 24px
             ),
-            #74c0fc;
-        transform: rotate(-7deg);
+            #8ec5ff;
         border-radius: 999px;
-        opacity: 0.88;
         z-index: 1;
-        box-shadow: inset 0 0 0 6px rgba(255,255,255,0.18);
-    }
+    }}
 
-    .world-road {
+    .road {{
         position: absolute;
-        background: #737b85;
-        z-index: 2;
-        box-shadow: inset 0 0 0 2px rgba(255,255,255,0.18);
-    }
+        background: #7b8491;
+        z-index: 1;
+        box-shadow: inset 0 0 0 2px rgba(255,255,255,0.15);
+    }}
 
-    .world-road.r1 {
-        left: -80px;
-        top: 382px;
-        width: 1470px;
-        height: 46px;
-        transform: rotate(-7deg);
-    }
-
-    .world-road.r2 {
-        left: 420px;
-        top: -40px;
-        width: 50px;
-        height: 1000px;
-        transform: rotate(12deg);
-    }
-
-    .world-road.r3 {
-        left: 800px;
-        top: 0;
-        width: 48px;
-        height: 980px;
-        transform: rotate(-14deg);
-    }
-
-    .world-road.r4 {
-        left: -100px;
-        top: 660px;
-        width: 1500px;
-        height: 42px;
-        transform: rotate(4deg);
-    }
-
-    .world-road::after {
+    .road::after {{
         content: "";
         position: absolute;
         left: 0;
         top: 50%;
-        width: 2200px;
-        border-top: 3px dashed rgba(255,255,255,0.75);
-        animation: roadDash 2.2s linear infinite;
-    }
+        width: 2000px;
+        border-top: 3px dashed rgba(255,255,255,0.72);
+    }}
 
-    @keyframes roadDash {
-        from { transform: translateX(0); }
-        to { transform: translateX(-60px); }
-    }
+    .r1 {{
+        left: -60px;
+        top: 430px;
+        width: 1450px;
+        height: 48px;
+        transform: rotate(-7deg);
+    }}
 
-    .tree {
+    .r2 {{
+        left: 390px;
+        top: -30px;
+        width: 54px;
+        height: 1060px;
+        transform: rotate(11deg);
+    }}
+
+    .r3 {{
+        left: 820px;
+        top: -20px;
+        width: 54px;
+        height: 1060px;
+        transform: rotate(-12deg);
+    }}
+
+    .tree {{
         position: absolute;
         font-size: 34px;
-        z-index: 3;
-        filter: drop-shadow(0 5px 4px rgba(27,31,36,0.12));
-    }
+        z-index: 2;
+    }}
 
-    .tree.t1 { left: 35px; top: 185px; }
-    .tree.t2 { left: 90px; top: 245px; }
-    .tree.t3 { left: 150px; top: 178px; }
-    .tree.t4 { left: 670px; top: 105px; }
-    .tree.t5 { left: 725px; top: 165px; }
-    .tree.t6 { left: 1200px; top: 350px; }
-    .tree.t7 { left: 1110px; top: 365px; }
-    .tree.t8 { left: 420px; top: 690px; }
-    .tree.t9 { left: 500px; top: 730px; }
-    .tree.t10 { left: 1180px; top: 730px; }
+    .t1 {{ left: 30px; top: 120px; }}
+    .t2 {{ left: 185px; top: 85px; }}
+    .t3 {{ left: 350px; top: 105px; }}
+    .t4 {{ left: 635px; top: 60px; }}
+    .t5 {{ left: 1080px; top: 70px; }}
+    .t6 {{ left: 1230px; top: 460px; }}
+    .t7 {{ left: 95px; top: 820px; }}
+    .t8 {{ left: 660px; top: 830px; }}
+    .t9 {{ left: 1180px; top: 800px; }}
 
-    .world-label {
+    .world-banner {{
         position: absolute;
-        left: 34px;
-        top: 28px;
+        left: 24px;
+        top: 24px;
         z-index: 5;
-        background: rgba(255,255,255,0.82);
-        border: 1px solid rgba(208,215,222,0.9);
+        background: rgba(255,255,255,0.92);
+        border: 1px solid #d0d7de;
         border-radius: 22px;
         padding: 16px 18px;
-        box-shadow: 0 10px 24px rgba(27,31,36,0.10);
-    }
+        box-shadow: 0 10px 22px rgba(27,31,36,0.08);
+        width: 360px;
+    }}
 
-    .world-label-title {
+    .world-banner-title {{
         font-size: 23px;
-        font-weight: 950;
-        color: var(--ink);
+        font-weight: 900;
+        color: #1f2328;
         margin-bottom: 4px;
-    }
+    }}
 
-    .world-label-desc {
+    .world-banner-desc {{
         font-size: 13px;
-        color: var(--muted);
         line-height: 1.55;
-    }
+        color: #57606a;
+    }}
 
-    .district-zone {
+    .energy-field {{
         position: absolute;
-        z-index: 10;
+        right: 34px;
+        top: 450px;
+        width: 350px;
+        height: 410px;
+        z-index: 3;
+        background: rgba(255,255,255,0.58);
+        border: 1px solid rgba(208,215,222,0.85);
         border-radius: 24px;
-        border: 2px solid rgba(255,255,255,0.85);
-        background:
-            linear-gradient(135deg, rgba(255,255,255,0.52), rgba(255,255,255,0.22)),
-            repeating-linear-gradient(45deg, #b7e4a8 0 18px, #a8db98 18px 36px);
-        box-shadow:
-            0 14px 28px rgba(27,31,36,0.15),
-            inset 0 0 0 1px rgba(0,0,0,0.05);
-        overflow: hidden;
-        animation: zoneAppear 0.85s ease both;
-    }
+        box-shadow: 0 10px 20px rgba(27,31,36,0.08);
+        backdrop-filter: blur(2px);
+    }}
 
-    .zone-1 { animation-delay: 0.2s; }
-    .zone-2 { animation-delay: 0.35s; }
-    .zone-3 { animation-delay: 0.50s; }
-    .zone-4 { animation-delay: 0.65s; }
-    .zone-5 { animation-delay: 0.80s; }
-
-    @keyframes zoneAppear {
-        from {
-            opacity: 0;
-            transform: translateY(18px) scale(0.97);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-        }
-    }
-
-    .zone-label {
+    .energy-field-title {{
         position: absolute;
-        left: 10px;
-        top: 10px;
-        right: 10px;
-        z-index: 20;
-        display: grid;
-        grid-template-columns: 38px 1fr;
-        gap: 8px;
-        align-items: center;
-        padding: 8px 10px;
-        background: rgba(255,255,255,0.90);
-        border: 1px solid rgba(208,215,222,0.9);
-        border-radius: 16px;
-        box-shadow: 0 6px 14px rgba(27,31,36,0.08);
-    }
+        left: 18px;
+        top: 16px;
+        font-size: 16px;
+        font-weight: 900;
+        color: #1f2328;
+        z-index: 6;
+    }}
 
-    .zone-main-icon {
-        width: 34px;
-        height: 34px;
-        border-radius: 13px;
+    .energy-field-sub {{
+        position: absolute;
+        left: 18px;
+        top: 42px;
+        font-size: 12px;
+        color: #57606a;
+        z-index: 6;
+    }}
+
+    .energy-object {{
+        position: absolute;
+        width: 48px;
+        text-align: center;
+        z-index: 5;
+    }}
+
+    .energy-object-icon {{
+        width: 42px;
+        height: 42px;
+        margin: 0 auto 3px;
+        border-radius: 15px;
+        background: var(--item-color);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 25px;
+        box-shadow: 0 8px 14px rgba(27,31,36,0.12);
+    }}
+
+    .energy-object-name {{
+        font-size: 9px;
+        font-weight: 800;
+        color: #374151;
+        background: rgba(255,255,255,0.82);
+        border-radius: 999px;
+        padding: 2px 4px;
+    }}
+
+    .district-card {{
+        position: absolute;
+        background:
+            linear-gradient(180deg, rgba(255,255,255,0.32), rgba(255,255,255,0.12)),
+            repeating-linear-gradient(45deg, #dcedc5 0 18px, #d7e8bf 18px 36px);
+        border: 2px solid rgba(255,255,255,0.95);
+        border-radius: 28px;
+        box-shadow: 0 16px 30px rgba(27,31,36,0.12);
+        overflow: hidden;
+        z-index: 4;
+    }}
+
+    .district-header {{
+        position: absolute;
+        left: 14px;
+        right: 14px;
+        top: 14px;
+        height: 68px;
+        background: rgba(255,255,255,0.95);
+        border: 1px solid #d0d7de;
+        border-radius: 20px;
+        display: grid;
+        grid-template-columns: 52px 1fr;
+        gap: 10px;
+        align-items: center;
+        padding: 10px 14px;
+        z-index: 10;
+        box-shadow: 0 8px 18px rgba(27,31,36,0.06);
+    }}
+
+    .district-icon {{
+        width: 46px;
+        height: 46px;
+        border-radius: 16px;
         background: #f6f8fa;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 21px;
-    }
-
-    .zone-title {
-        font-size: 13px;
-        font-weight: 950;
-        color: var(--ink);
-        margin-bottom: 2px;
-    }
-
-    .zone-desc {
-        font-size: 10px;
-        color: var(--muted);
-        line-height: 1.25;
-    }
-
-    .zone-ground {
-        position: absolute;
-        inset: 0;
-        z-index: 12;
-    }
-
-    .mini-road {
-        position: absolute;
-        background: rgba(115,123,133,0.75);
-        z-index: 13;
-        box-shadow: inset 0 0 0 2px rgba(255,255,255,0.16);
-    }
-
-    .road-horizontal {
-        left: -30px;
-        top: 60%;
-        width: 140%;
-        height: 28px;
-        transform: rotate(-9deg);
-    }
-
-    .road-vertical {
-        left: 47%;
-        top: 0;
-        width: 26px;
-        height: 120%;
-        transform: rotate(13deg);
-    }
-
-    .building {
-        position: absolute;
-        z-index: 18;
-        width: 36px;
-        height: 36px;
-        opacity: 0;
-        transform: translateY(22px) scale(0.2);
-        animation: buildingPop 0.56s cubic-bezier(.16,.84,.32,1.32) forwards;
-    }
-
-    .building-large {
-        width: 44px;
-        height: 44px;
-    }
-
-    .building-shadow {
-        position: absolute;
-        left: 5px;
-        bottom: -3px;
-        width: 28px;
-        height: 9px;
-        background: rgba(27,31,36,0.20);
-        border-radius: 999px;
-        filter: blur(1px);
-    }
-
-    .building-icon {
-        position: relative;
-        z-index: 2;
-        width: 100%;
-        height: 100%;
-        font-size: 29px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        filter: drop-shadow(0 5px 3px rgba(27,31,36,0.20));
-    }
-
-    .building-large .building-icon {
-        font-size: 35px;
-    }
-
-    .building-welfare .building-icon {
-        filter: drop-shadow(0 5px 3px rgba(26,127,55,0.22));
-    }
-
-    .building-education .building-icon {
-        filter: drop-shadow(0 5px 3px rgba(9,105,218,0.22));
-    }
-
-    .building-safety .building-icon {
-        filter: drop-shadow(0 5px 3px rgba(207,34,46,0.22));
-    }
-
-    @keyframes buildingPop {
-        0% {
-            opacity: 0;
-            transform: translateY(22px) scale(0.2);
-        }
-        72% {
-            opacity: 1;
-            transform: translateY(-4px) scale(1.16);
-        }
-        100% {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-        }
-    }
-
-    .villager {
-        position: absolute;
-        z-index: 26;
-        width: 34px;
-        height: 44px;
-        opacity: 0;
-        animation:
-            villagerEnter 0.55s ease forwards,
-            villagerWalk 2.8s ease-in-out infinite alternate;
-    }
-
-    .villager-face {
-        font-size: 24px;
-        filter: drop-shadow(0 4px 3px rgba(27,31,36,0.22));
-    }
-
-    .villager-mood {
-        position: absolute;
-        right: -8px;
-        top: -10px;
-        width: 22px;
-        height: 22px;
-        border-radius: 50%;
-        background: #ffffff;
-        border: 2px solid var(--mood-color);
-        font-size: 13px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 4px 8px rgba(27,31,36,0.18);
-    }
-
-    @keyframes villagerEnter {
-        from {
-            opacity: 0;
-            transform: translateY(10px) scale(0.5);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-        }
-    }
-
-    @keyframes villagerWalk {
-        from {
-            margin-left: calc(var(--walk) * -0.4);
-            margin-top: 0;
-        }
-        to {
-            margin-left: var(--walk);
-            margin-top: -4px;
-        }
-    }
-
-    .zone-score {
-        position: absolute;
-        left: 10px;
-        right: 10px;
-        bottom: 9px;
-        z-index: 30;
-        display: grid;
-        grid-template-columns: 32px 1fr 48px;
-        gap: 8px;
-        align-items: center;
-        padding: 8px 9px;
-        border-radius: 15px;
-        border: 1px solid rgba(208,215,222,0.95);
-        background: rgba(255,255,255,0.92);
-        box-shadow: 0 6px 14px rgba(27,31,36,0.10);
-    }
-
-    .score-face {
-        font-size: 23px;
-    }
-
-    .score-label {
-        font-size: 10px;
-        color: var(--muted);
-        font-weight: 900;
-        margin-bottom: 5px;
-    }
-
-    .score-bar {
-        height: 8px;
-        background: #d0d7de;
-        border-radius: 999px;
-        overflow: hidden;
-    }
-
-    .score-fill {
-        width: 0%;
-        height: 100%;
-        background: var(--score-color);
-        border-radius: 999px;
-        animation: fillScore 1.2s ease forwards;
-        animation-delay: 9.3s;
-    }
-
-    @keyframes fillScore {
-        to {
-            width: var(--score-width);
-        }
-    }
-
-    .score-num {
-        font-size: 15px;
-        font-weight: 950;
-        text-align: right;
-    }
-
-    .energy-building {
-        position: absolute;
-        z-index: 11;
-        width: 42px;
-        height: 42px;
-        opacity: 0;
-        transform: translateY(20px) scale(0.2);
-        animation: energyPop 0.56s cubic-bezier(.16,.84,.32,1.32) forwards;
-    }
-
-    .energy-building-icon {
-        font-size: 33px;
-        filter: drop-shadow(0 5px 3px rgba(27,31,36,0.20));
-    }
-
-    @keyframes energyPop {
-        0% {
-            opacity: 0;
-            transform: translateY(20px) scale(0.2);
-        }
-        72% {
-            opacity: 1;
-            transform: translateY(-4px) scale(1.12);
-        }
-        100% {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-        }
-    }
-
-    .world-vehicle {
-        position: absolute;
-        left: -80px;
-        z-index: 40;
         font-size: 28px;
-        animation: worldVehicleMove 7s linear infinite;
-        opacity: 0;
-    }
+    }}
 
-    .world-vehicle.police {
-        animation-duration: 6.2s;
-    }
+    .district-title {{
+        font-size: 17px;
+        font-weight: 900;
+        color: #1f2328;
+        line-height: 1.2;
+        margin-bottom: 2px;
+    }}
 
-    @keyframes worldVehicleMove {
-        0% {
-            left: -80px;
-            opacity: 0;
-            transform: rotate(-7deg);
-        }
-        8% {
-            opacity: 1;
-        }
-        88% {
-            opacity: 1;
-        }
-        100% {
-            left: 1360px;
-            opacity: 0;
-            transform: rotate(-7deg);
-        }
-    }
+    .district-desc {{
+        font-size: 12px;
+        color: #57606a;
+        line-height: 1.35;
+    }}
 
-    .speech-bubble {
+    .applied-panel {{
         position: absolute;
-        z-index: 60;
-        right: 42px;
-        top: 220px;
-        max-width: 290px;
-        background: #ffffff;
-        border: 1px solid var(--line);
-        border-radius: 22px;
-        padding: 16px 18px;
-        box-shadow: 0 12px 26px rgba(27,31,36,0.14);
-        opacity: 0;
-        animation: bubbleIn 0.7s ease forwards;
-        animation-delay: 8.5s;
-    }
+        left: 14px;
+        right: 14px;
+        top: 88px;
+        height: 58px;
+        background: rgba(255,255,255,0.88);
+        border: 1px solid #d0d7de;
+        border-radius: 18px;
+        z-index: 11;
+        padding: 8px 10px;
+        box-shadow: 0 7px 14px rgba(27,31,36,0.06);
+    }}
 
-    .speech-bubble::after {
+    .applied-title {{
+        font-size: 10px;
+        font-weight: 900;
+        color: #57606a;
+        margin-bottom: 4px;
+    }}
+
+    .applied-list {{
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+    }}
+
+    .applied-item {{
+        display: grid;
+        grid-template-columns: 26px 1fr;
+        gap: 5px;
+        align-items: center;
+        min-width: 0;
+    }}
+
+    .applied-icon {{
+        width: 24px;
+        height: 24px;
+        border-radius: 9px;
+        background: var(--item-color);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+    }}
+
+    .applied-name {{
+        font-size: 10px;
+        font-weight: 900;
+        color: #1f2328;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }}
+
+    .applied-sub {{
+        font-size: 9px;
+        color: #6b7280;
+    }}
+
+    .district-inner-road {{
+        position: absolute;
+        background: rgba(123,132,145,0.82);
+        z-index: 2;
+        box-shadow: inset 0 0 0 2px rgba(255,255,255,0.14);
+    }}
+
+    .district-inner-road::after {{
         content: "";
         position: absolute;
-        left: 30px;
-        bottom: -10px;
+        left: 0;
+        top: 50%;
+        width: 800px;
+        border-top: 2px dashed rgba(255,255,255,0.72);
+    }}
+
+    .road-1 {{
+        left: -30px;
+        top: 178px;
+        width: 430px;
+        height: 26px;
+        transform: rotate(-8deg);
+    }}
+
+    .road-2 {{
+        left: 165px;
+        top: 145px;
+        width: 24px;
+        height: 190px;
+        transform: rotate(10deg);
+    }}
+
+    .facility-item {{
+        position: absolute;
+        z-index: 6;
+        width: 54px;
+        text-align: center;
+    }}
+
+    .facility-emoji {{
+        width: 42px;
+        height: 42px;
+        margin: 0 auto 2px;
+        border-radius: 15px;
+        background: var(--item-color);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 25px;
+        box-shadow: 0 7px 13px rgba(27,31,36,0.13);
+    }}
+
+    .facility-caption {{
+        font-size: 10px;
+        font-weight: 800;
+        color: #374151;
+        background: rgba(255,255,255,0.84);
+        border-radius: 999px;
+        padding: 2px 6px;
+        display: inline-block;
+    }}
+
+    .resident-item {{
+        position: absolute;
+        z-index: 7;
+        width: 36px;
+        height: 42px;
+    }}
+
+    .resident-person {{
+        font-size: 28px;
+        filter: drop-shadow(0 3px 3px rgba(27,31,36,0.14));
+    }}
+
+    .resident-mood {{
+        position: absolute;
+        right: -6px;
+        top: -8px;
         width: 20px;
         height: 20px;
+        border-radius: 50%;
         background: #ffffff;
-        border-right: 1px solid var(--line);
-        border-bottom: 1px solid var(--line);
-        transform: rotate(45deg);
-    }
-
-    @keyframes bubbleIn {
-        from {
-            opacity: 0;
-            transform: translateY(10px) scale(0.96);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-        }
-    }
-
-    .bubble-title {
-        font-size: 15px;
-        font-weight: 950;
-        color: var(--ink);
-        margin-bottom: 5px;
-    }
-
-    .bubble-desc {
-        font-size: 13px;
-        color: var(--muted);
-        line-height: 1.55;
-    }
-
-    .energy-summary-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 12px;
-        margin-bottom: 18px;
-    }
-
-    .analysis-bridge {
-        display: grid;
-        grid-template-columns: 1fr 64px 1fr;
-        gap: 14px;
+        border: 2px solid #e5e7eb;
+        box-shadow: 0 4px 8px rgba(27,31,36,0.14);
+        display: flex;
         align-items: center;
-        margin-bottom: 22px;
-    }
+        justify-content: center;
+        font-size: 12px;
+    }}
 
-    .bridge-card {
-        background: #ffffff;
-        border: 1px solid var(--line);
-        border-radius: 26px;
-        padding: 22px 24px;
-        min-height: 150px;
-        box-shadow: 0 10px 26px rgba(27,31,36,0.07);
-    }
+    .district-score-panel {{
+        position: absolute;
+        left: 14px;
+        right: 14px;
+        bottom: 14px;
+        background: rgba(255,255,255,0.96);
+        border: 1px solid #d0d7de;
+        border-radius: 20px;
+        min-height: 78px;
+        display: grid;
+        grid-template-columns: 58px 1fr 66px;
+        gap: 10px;
+        align-items: center;
+        padding: 12px 14px;
+        z-index: 12;
+        box-shadow: 0 8px 18px rgba(27,31,36,0.06);
+    }}
 
-    .bridge-title {
-        font-size: 21px;
-        font-weight: 950;
-        margin-bottom: 8px;
-    }
+    .score-face-big {{
+        width: 46px;
+        height: 46px;
+        border-radius: 16px;
+        background: #fff7ed;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+    }}
 
-    .bridge-desc {
-        color: var(--muted);
-        line-height: 1.65;
+    .score-top-row {{
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 6px;
+        gap: 10px;
+    }}
+
+    .score-state {{
         font-size: 14px;
-    }
+        font-weight: 900;
+        color: #1f2328;
+    }}
 
-    .bridge-arrow {
-        font-size: 44px;
-        text-align: center;
-        color: var(--blue);
-        font-weight: 950;
-        animation: arrowMove 0.85s ease-in-out infinite alternate;
-    }
+    .score-stars {{
+        font-size: 13px;
+        color: #f59e0b;
+        font-weight: 800;
+    }}
 
-    @keyframes arrowMove {
-        from { transform: translateX(0); }
-        to { transform: translateX(8px); }
-    }
+    .score-bar-bg {{
+        height: 10px;
+        border-radius: 999px;
+        background: #e5e7eb;
+        overflow: hidden;
+    }}
 
-    .final-card {
+    .score-bar-fill {{
+        height: 100%;
+        border-radius: 999px;
+    }}
+
+    .score-sub {{
+        font-size: 12px;
+        color: #6b7280;
+        margin-top: 4px;
+    }}
+
+    .score-right {{
+        font-size: 34px;
+        font-weight: 900;
+        text-align: right;
+        line-height: 1;
+    }}
+
+    .reaction-box {{
+        background: #ffffff;
+        border: 1px solid #d0d7de;
+        border-radius: 24px;
+        padding: 20px 22px;
+        box-shadow: 0 10px 22px rgba(27,31,36,0.06);
+        margin-top: 20px;
+        margin-bottom: 18px;
+    }}
+
+    .reaction-title {{
+        font-size: 22px;
+        font-weight: 900;
+        color: #1f2328;
+        margin-bottom: 8px;
+    }}
+
+    .reaction-desc {{
+        font-size: 15px;
+        color: #57606a;
+        line-height: 1.75;
+    }}
+
+    .final-card {{
         background: linear-gradient(135deg, #f0fff4 0%, #ddf4ff 100%);
         border: 1px solid #aceebb;
-        border-radius: 30px;
-        padding: 28px 30px;
-        box-shadow: 0 12px 30px rgba(27,31,36,0.07);
-    }
+        border-radius: 26px;
+        padding: 24px 26px;
+        box-shadow: 0 12px 24px rgba(27,31,36,0.06);
+        margin-top: 10px;
+    }}
 
-    .final-title {
-        font-size: 27px;
-        font-weight: 950;
-        color: var(--ink);
-        margin-bottom: 10px;
-    }
+    .final-title {{
+        font-size: 26px;
+        font-weight: 900;
+        margin-bottom: 8px;
+        color: #1f2328;
+    }}
 
-    .final-desc {
+    .final-desc {{
         font-size: 15px;
-        color: var(--muted);
         line-height: 1.75;
+        color: #57606a;
         margin-bottom: 16px;
-    }
+    }}
 
-    .dashboard-button {
+    .dash-link-btn {{
         display: inline-block;
-        background: var(--blue);
+        background: #0969da;
         color: white !important;
         text-decoration: none !important;
-        padding: 13px 18px;
-        border-radius: 15px;
+        padding: 12px 18px;
+        border-radius: 14px;
         font-size: 14px;
-        font-weight: 950;
-        box-shadow: 0 8px 18px rgba(9,105,218,0.22);
-    }
+        font-weight: 900;
+        box-shadow: 0 8px 16px rgba(9,105,218,0.18);
+    }}
 
-    .dashboard-empty {
+    .dash-link-empty {{
         display: inline-block;
         background: rgba(255,255,255,0.78);
-        border: 1px solid var(--line);
-        border-radius: 16px;
-        padding: 14px 16px;
+        border: 1px solid #d0d7de;
+        border-radius: 14px;
+        padding: 12px 14px;
         font-size: 13px;
-        color: var(--muted);
-    }
+        color: #57606a;
+    }}
 
-    .source-note {
-        margin-top: 12px;
+    .mini-note {{
+        margin-top: 10px;
         font-size: 11px;
         color: #8c959f;
-        line-height: 1.45;
-    }
-
-    .map-scroll-hint {
-        margin-bottom: 10px;
-        color: var(--muted);
-        font-size: 13px;
         line-height: 1.5;
-    }
+    }}
 
-    .world-scroll {
-        width: 100%;
-        overflow-x: auto;
-        padding-bottom: 12px;
-    }
-
-    @media (max-width: 1150px) {
-        .top-content,
+    @media (max-width: 1100px) {{
+        .hero-content,
         .hud-grid,
-        .policy-summary-grid,
-        .energy-summary-grid,
-        .analysis-bridge {
+        .inventory-grid,
+        .inventory-grid.energy {{
             grid-template-columns: 1fr;
-        }
-
-        .game-title {
-            font-size: 32px;
-        }
-
-        .bridge-arrow {
-            transform: rotate(90deg);
-        }
-    }
+        }}
+    }}
     </style>
-    """
 
-    top = f"""
-    <div class="game-root">
-        <section class="game-top">
-            <div class="wood-plank"></div>
-            <div class="top-content">
+    <div class="root">
+        <div class="hero">
+            <div class="hero-content">
                 <div>
-                    <div class="game-eyebrow">NOVA City Builder Simulation</div>
-                    <div class="game-title">내가 설계한 스마트시티를 만들자!</div>
-                    <div class="game-desc">
-                        예산과 에너지 배분을 조정하면 하나의 거대한 NOVA시 지도에서
-                        A~E구역의 건물, 시민, 교통, 에너지 설비, 만족도 반응이 함께 바뀝니다.
-                        정량 분석은 2차 대시보드에서 이어서 확인합니다.
+                    <div class="hero-eyebrow">NOVA Smart City Item Simulation</div>
+                    <div class="hero-title">정책을 아이템처럼 투입해 마을을 바꾸는 스마트시티 시뮬레이션</div>
+                    <div class="hero-desc">
+                        예산과 에너지 배분을 숫자가 아니라 게임 아이템으로 표현했습니다.
+                        어떤 정책 아이템을 얼마나 투입했는지, 그리고 그 아이템이 각 구역에 어떻게 적용되는지
+                        한눈에 볼 수 있습니다.
                     </div>
                 </div>
 
-                <div class="resource-panel">
-                    <div class="resource-row">
-                        <div class="resource-icon">💰</div>
-                        <div class="resource-name">정책 예산</div>
-                        <div class="resource-value">100%</div>
+                <div class="hero-panel">
+                    <div class="hero-stat">
+                        <div class="hero-stat-name">현재 시나리오</div>
+                        <div class="hero-stat-value">{html_lib.escape(preset_choice)}</div>
                     </div>
-                    <div class="resource-row">
-                        <div class="resource-icon">⚡</div>
-                        <div class="resource-name">에너지 배분</div>
-                        <div class="resource-value">100%</div>
+                    <div class="hero-stat">
+                        <div class="hero-stat-name">도시 평균 만족도</div>
+                        <div class="hero-stat-value">{avg:.1f}점</div>
                     </div>
-                    <div class="resource-row">
-                        <div class="resource-icon">🏙️</div>
-                        <div class="resource-name">관리 구역</div>
-                        <div class="resource-value">5개</div>
+                    <div class="hero-stat">
+                        <div class="hero-stat-name">에너지 자립률</div>
+                        <div class="hero-stat-value">{independence * 100:.1f}%</div>
                     </div>
-                    <div class="resource-row">
-                        <div class="resource-icon">⭐</div>
-                        <div class="resource-name">현재 시나리오</div>
-                        <div class="resource-value" style="font-size:15px;">{html_lib.escape(preset_choice)}</div>
+                    <div class="hero-stat">
+                        <div class="hero-stat-name">도시 상태</div>
+                        <div class="hero-stat-value" style="color:{warning_color};">{warning_text}</div>
                     </div>
                 </div>
             </div>
-        </section>
-    """
+        </div>
 
-    hud = f"""
-        <section class="hud-grid">
+        <div class="hud-grid">
             <div class="hud-card">
-                <div class="hud-label">선택된 정책</div>
+                <div class="hud-label">선택 정책</div>
                 <div class="hud-value" style="font-size:24px;">{html_lib.escape(preset_choice)}</div>
-                <div class="hud-sub">입력한 비율에 따라 마을 장면이 다시 생성됩니다.</div>
+                <div class="hud-sub">슬라이더 값을 바꾸면 정책 아이템과 마을 장면이 다시 반영됩니다.</div>
             </div>
 
             <div class="hud-card">
-                <div class="hud-label">도시 평균 만족도</div>
+                <div class="hud-label">시민 만족도 평균</div>
                 <div class="hud-value">{avg:.1f}점</div>
-                <div class="hud-sub">지도에서는 시민 표정과 구역 게이지로 표현됩니다.</div>
+                <div class="hud-sub">구역별 주민 구성과 정책 아이템 효과가 반영됩니다.</div>
             </div>
 
             <div class="hud-card">
                 <div class="hud-label">에너지 자립률</div>
                 <div class="hud-value">{independence * 100:.1f}%</div>
-                <div class="hud-sub">태양광·수소·ESS 설비가 늘수록 높아집니다.</div>
+                <div class="hud-sub">에너지 아이템의 조합에 따라 자립률이 달라집니다.</div>
             </div>
 
             <div class="hud-card">
-                <div class="hud-label">도시 상태</div>
-                <div class="hud-value" style="color:{warning_color}; font-size:24px;">{warning_text}</div>
-                <div class="hud-sub">절감액 환원 {savings * 100:.2f}% · {html_lib.escape(model_source)}</div>
+                <div class="hud-label">절감액 환원 효과</div>
+                <div class="hud-value">{savings * 100:.2f}%</div>
+                <div class="hud-sub">{html_lib.escape(source)}</div>
             </div>
-        </section>
-    """
+        </div>
 
-    quest = """
-        <section class="quest-panel">
-            <div class="quest-icon">🧭</div>
-            <div>
-                <div class="quest-title">오늘의 미션: 정책 처치가 마을 사람들의 삶을 어떻게 바꾸는지 관찰하기</div>
-                <div class="quest-desc">
-                    복지 예산을 늘리면 병원과 돌봄시설이, 교육 예산을 늘리면 학교와 도서관이,
-                    안전 예산을 늘리면 경찰과 CCTV가, 인프라 예산을 늘리면 버스와 공원이,
-                    에너지 투자를 늘리면 충전소와 발전 설비가 생깁니다.
-                </div>
-            </div>
-        </section>
-    """
+        <div class="section-title">🎒 정책 아이템 인벤토리</div>
+        <div class="section-sub">
+            내가 처치한 예산 배분을 게임 아이템처럼 표현했습니다. 비율이 높을수록 아이템 레벨과 슬롯이 커집니다.
+        </div>
+        <div class="inventory-grid">
+            {budget_inventory}
+        </div>
 
-    policy = f"""
-        <section class="policy-summary-grid">
-            {policy_cards}
-        </section>
-    """
+        <div class="section-title">⚡ 에너지 아이템 인벤토리</div>
+        <div class="section-sub">
+            에너지 배분도 아이템 오브젝트로 표현했습니다. 태양광, 수소, ESS, 외부전력망의 구성이 자립률을 결정합니다.
+        </div>
+        <div class="inventory-grid energy">
+            {energy_inventory}
+        </div>
 
-    bridge = f"""
-        <section class="analysis-bridge">
-            <div class="bridge-card">
-                <div class="bridge-title">🎛️ 정책 처치</div>
-                <div class="bridge-desc">
-                    복지 {welfare}% · 교육 {education}% · 에너지 인프라 {energy_infra}% ·
-                    일반 인프라 {general_infra}% · 안전 {safety}%<br>
-                    태양광 {solar}% · 수소 {hydrogen}% · ESS {ess}% · 외부전력망 {external}%
-                </div>
-            </div>
-
-            <div class="bridge-arrow">→</div>
-
-            <div class="bridge-card">
-                <div class="bridge-title">🏙️ 거대한 마을 환경 변화</div>
-                <div class="bridge-desc">
-                    같은 예산이라도 구역의 성격에 따라 다르게 표현됩니다.
-                    대학가는 교육 예산에, 복지타운은 복지와 안전 예산에,
-                    산업단지는 인프라와 에너지 예산에 더 민감하게 반응합니다.
-                </div>
-            </div>
-        </section>
-    """
-
-    world = f"""
-        <div class="map-scroll-hint">
-            지도가 넓게 구성되어 있습니다. 화면이 좁으면 가로로 스크롤해서 전체 NOVA시를 확인할 수 있습니다.
+        <div class="section-title">🏘️ NOVA시 메인 마을 지도</div>
+        <div class="section-sub">
+            각 구역의 상단에는 실제로 적용된 정책 아이템이 표시됩니다.
+            구역 내부 시설은 투입된 아이템의 효과를 시각화한 것입니다.
         </div>
 
         <div class="world-scroll">
-            <section class="world-board">
-                <div class="world-label">
-                    <div class="world-label-title">NOVA시 통합 마을 맵</div>
-                    <div class="world-label-desc">
-                        A~E구역이 하나의 도시 안에서 연결되어 있고,
-                        정책 비율에 따라 건물·시민·차량·에너지 설비가 변화합니다.
-                    </div>
-                </div>
+            <div class="world">
+                <div class="sun">☀️</div>
 
                 <div class="cloud c1">☁️</div>
                 <div class="cloud c2">☁️</div>
@@ -2166,141 +1918,70 @@ def make_game_html(
 
                 <div class="river"></div>
 
-                <div class="world-road r1"></div>
-                <div class="world-road r2"></div>
-                <div class="world-road r3"></div>
-                <div class="world-road r4"></div>
+                <div class="road r1"></div>
+                <div class="road r2"></div>
+                <div class="road r3"></div>
 
-                <div class="tree t1">🌲</div>
-                <div class="tree t2">🌳</div>
-                <div class="tree t3">🌲</div>
-                <div class="tree t4">🌳</div>
-                <div class="tree t5">🌲</div>
-                <div class="tree t6">🌳</div>
-                <div class="tree t7">🌲</div>
-                <div class="tree t8">🌳</div>
-                <div class="tree t9">🌲</div>
-                <div class="tree t10">🌳</div>
+                <div class="tree t1">🌳</div>
+                <div class="tree t2">🌲</div>
+                <div class="tree t3">🌳</div>
+                <div class="tree t4">🌲</div>
+                <div class="tree t5">🌳</div>
+                <div class="tree t6">🌲</div>
+                <div class="tree t7">🌳</div>
+                <div class="tree t8">🌲</div>
+                <div class="tree t9">🌳</div>
 
-                {energy_world}
-                {vehicles}
-                {district_html}
-
-                <div class="speech-bubble">
-                    <div class="bubble-title">마을 사람들의 반응</div>
-                    <div class="bubble-desc">
-                        “새로운 시설이 생기고 생활 환경이 달라졌어요.
-                        이제 2차 대시보드에서 우리 구역의 실제 만족도 변화를 확인해볼게요!”
+                <div class="world-banner">
+                    <div class="world-banner-title">NOVA시 통합 아이템 맵</div>
+                    <div class="world-banner-desc">
+                        정책 아이템은 구역별 시민 특성에 따라 다르게 작동합니다.
+                        대학가는 교육 아이템, 복지타운은 복지·안전 아이템에 더 강하게 반응합니다.
                     </div>
                 </div>
-            </section>
+
+                <div class="energy-field">
+                    <div class="energy-field-title">에너지 아이템 필드</div>
+                    <div class="energy-field-sub">투입 비율에 따라 에너지 오브젝트가 배치됩니다.</div>
+                    {energy_objects}
+                </div>
+
+                {district_cards}
+            </div>
         </div>
-    """
 
-    energy_summary = f"""
-        <section class="energy-summary-grid">
-            {energy_cards}
-        </section>
-    """
+        <div class="reaction-box">
+            <div class="reaction-title">🗣️ 마을 사람들의 반응</div>
+            <div class="reaction-desc">
+                “정책이 단순한 숫자가 아니라 아이템처럼 우리 구역에 투입되는 모습이 보여요.
+                어떤 아이템이 들어왔는지에 따라 시설이 달라지고, 그 결과가 만족도와 표정으로 나타나요.”
+            </div>
+        </div>
 
-    final = f"""
-        <section class="final-card">
-            <div class="final-title">🎮 1차 고도화 게임형 시뮬레이션 완료</div>
+        <div class="final-card">
+            <div class="final-title">📊 다음 단계: 정량 분석 대시보드로 이동</div>
             <div class="final-desc">
-                이 화면은 정책 처치가 하나의 도시 환경 안에서 어떻게 구현되는지 보여주는 장면형 시뮬레이션입니다.
-                다음 단계에서는 같은 입력값을 바탕으로 2차 대시보드에서 시민 만족도,
-                에너지 자립률, 구역별 격차, 시나리오 비교를 분석합니다.
+                지금 화면은 정책 처치가 마을의 모습과 주민 상태를 어떻게 바꾸는지를 시각적으로 보여주는 1차 시뮬레이션입니다.
+                다음 단계에서는 같은 입력값을 기반으로 2차 대시보드에서 구역별 만족도, 평균 점수,
+                에너지 자립률, 시나리오 비교를 정량적으로 분석할 수 있습니다.
             </div>
             {dashboard_button}
-            <div class="source-note">
-                이 게임형 화면은 기존 classes.py OOP 모델의 결과값을 기반으로 시민 표정과 만족도 게이지를 표현합니다.
-                완전한 모바일 게임 그래픽 수준으로 만들려면 별도의 건물·도로·캐릭터 이미지 에셋을 추가하면 더 자연스럽게 확장할 수 있습니다.
+            <div class="mini-note">
+                이 화면은 기존 classes.py의 OOP 결과를 바탕으로 아이템형 시각화를 덧씌운 장면형 시뮬레이션입니다.
             </div>
-        </section>
+        </div>
+    </div>
     """
 
-    return css + top + hud + quest + policy + bridge + world + energy_summary + final + "</div>"
-
-
-# ==================================================
-# Streamlit 전체 CSS
-# ==================================================
-st.markdown(
-    """
-    <style>
-    .stApp {
-        background-color: #ffffff;
-        color: #1f2328;
-    }
-
-    [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #f6f8fa 0%, #ffffff 100%);
-        border-right: 1px solid #d0d7de;
-    }
-
-    [data-testid="stSidebar"] label,
-    [data-testid="stSidebar"] p,
-    [data-testid="stSidebar"] span {
-        color: #1f2328 !important;
-    }
-
-    .main-title {
-        font-size: 34px;
-        font-weight: 950;
-        color: #1f2328;
-        margin-bottom: 6px;
-    }
-
-    .main-subtitle {
-        font-size: 15px;
-        color: #57606a;
-        line-height: 1.65;
-        margin-bottom: 16px;
-    }
-
-    .guide-box {
-        background: #fff8c5;
-        border: 1px solid #f0d66b;
-        border-radius: 16px;
-        padding: 16px 18px;
-        color: #1f2328;
-        line-height: 1.65;
-        margin-bottom: 18px;
-    }
-
-    .alert-danger-custom {
-        background: rgba(207, 34, 46, 0.08);
-        border: 1px solid rgba(207, 34, 46, 0.3);
-        border-left: 4px solid #cf222e;
-        border-radius: 8px;
-        padding: 12px 16px;
-        margin: 8px 0;
-        color: #82071e;
-        font-size: 14px;
-    }
-
-    .alert-success-custom {
-        background: rgba(26, 127, 55, 0.08);
-        border: 1px solid rgba(26, 127, 55, 0.3);
-        border-left: 4px solid #1a7f37;
-        border-radius: 8px;
-        padding: 12px 16px;
-        margin: 8px 0;
-        color: #0f5323;
-        font-size: 14px;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+    return html
 
 
 # ==================================================
 # 사이드바
 # ==================================================
 with st.sidebar:
-    st.markdown("## 🎮 도시 건설 시뮬레이터")
-    st.caption("정책 처치가 A~E구역의 거대한 마을 환경을 어떻게 바꾸는지 보여줍니다.")
+    st.markdown("## 🎮 NOVA시 아이템 시뮬레이터")
+    st.caption("예산과 에너지를 게임 아이템처럼 투입해 마을 변화를 확인합니다.")
 
     preset_choice = st.selectbox("프리셋 시나리오", list(PRESETS.keys()))
     preset = PRESETS[preset_choice]
@@ -2329,15 +2010,9 @@ with st.sidebar:
     budget_ok = budget_total == 100
 
     if budget_ok:
-        st.markdown(
-            f'<div class="alert-success-custom">예산 합계: {budget_total}% ✓</div>',
-            unsafe_allow_html=True
-        )
+        st.markdown(f'<div class="ok-box">예산 합계: {budget_total}% ✓</div>', unsafe_allow_html=True)
     else:
-        st.markdown(
-            f'<div class="alert-danger-custom">예산 합계: {budget_total}% · 정확히 100% 필요</div>',
-            unsafe_allow_html=True
-        )
+        st.markdown(f'<div class="err-box">예산 합계: {budget_total}% · 정확히 100% 필요</div>', unsafe_allow_html=True)
 
     st.markdown("---")
     st.markdown("### ⚡ 에너지 배분")
@@ -2351,21 +2026,14 @@ with st.sidebar:
     energy_ok = energy_total == 100
 
     if energy_ok:
-        st.markdown(
-            f'<div class="alert-success-custom">에너지 합계: {energy_total}% ✓</div>',
-            unsafe_allow_html=True
-        )
+        st.markdown(f'<div class="ok-box">에너지 합계: {energy_total}% ✓</div>', unsafe_allow_html=True)
     else:
-        st.markdown(
-            f'<div class="alert-danger-custom">에너지 합계: {energy_total}% · 정확히 100% 필요</div>',
-            unsafe_allow_html=True
-        )
+        st.markdown(f'<div class="err-box">에너지 합계: {energy_total}% · 정확히 100% 필요</div>', unsafe_allow_html=True)
 
     predicted_rate = expected_energy_self_rate(solar, hydrogen, ess, external)
-
     st.info(
         f"예상 에너지 자립률: {predicted_rate * 100:.1f}%\n\n"
-        "태양광×0.7 + 수소연료전지×0.9 + ESS×0.6 + 외부전력망×0.0"
+        "계산식: 태양광×0.7 + 수소연료전지×0.9 + ESS×0.6 + 외부전력망×0.0"
     )
 
     st.markdown("---")
@@ -2376,82 +2044,64 @@ with st.sidebar:
         value=default_dashboard_url,
         placeholder="예: https://your-dashboard.streamlit.app",
     )
-    st.caption("기존 dashboard.py를 별도 앱으로 배포했다면 그 URL을 입력하세요.")
-
-    st.markdown("---")
-    st.info("슬라이더 값을 바꾸면 마을 전체가 다시 생성됩니다. 건물, 시민 표정, 만족도 게이지가 함께 바뀝니다.")
+    st.caption("기존 dashboard.py 앱 URL을 입력하면 결과를 바로 넘길 수 있습니다.")
 
 
 # ==================================================
-# 메인 화면
+# 메인
 # ==================================================
-st.markdown(
-    """
-    <div class="main-title">🎮 NOVA시 고도화 게임형 스마트시티 시뮬레이션</div>
-    <div class="main-subtitle">
-        이 화면은 최종 분석 대시보드가 아니라, 정책 처치가 하나의 거대한 마을 환경을 바꾸는 과정을
-        게임처럼 보여주는 1차 시뮬레이션입니다.
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+st.markdown("""
+<div class="app-title">🎮 NOVA시 아이템형 스마트시티 시뮬레이션</div>
+<div class="app-subtitle">
+예산과 에너지 배분을 게임 아이템처럼 표현했습니다.
+내가 어떤 처치를 했는지, 그 처치가 각 구역에 어떤 오브젝트로 적용되는지 더 직관적으로 확인할 수 있습니다.
+</div>
+""", unsafe_allow_html=True)
 
 if not HAS_CLASSES:
     st.warning(
-        "classes.py를 불러오지 못했습니다. 그래도 화면용 보조 계산으로 게임형 시뮬레이션은 표시됩니다. "
-        f"오류 내용: {IMPORT_ERROR_MESSAGE}"
+        "classes.py를 불러오지 못했습니다. 보조 계산으로 시뮬레이션 화면은 표시됩니다. "
+        f"오류: {IMPORT_ERROR_MESSAGE}"
     )
+
+st.markdown("""
+<div class="box-warn">
+<b>이번 최종본의 핵심</b><br>
+- 예산 배분 5개 항목을 정책 아이템으로 표현<br>
+- 에너지 배분 4개 항목을 에너지 아이템으로 표현<br>
+- 각 구역에 어떤 정책 아이템이 실제로 적용되었는지 표시<br>
+- 시설, 주민, 만족도, 아이템 효과를 하나의 게임형 화면에서 확인
+</div>
+""", unsafe_allow_html=True)
 
 if not budget_ok or not energy_ok:
-    st.markdown(
-        """
-        <div class="guide-box">
-            <b>시뮬레이션 실행 조건</b><br>
-            예산 배분 합계와 에너지 배분 합계가 각각 정확히 100%가 되어야 합니다.
-            왼쪽 사이드바에서 비율을 조정하면 도시 건설 화면이 나타납니다.
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    st.markdown("""
+    <div class="box-info">
+        <b>시뮬레이션 실행 조건</b><br>
+        예산 합계와 에너지 합계가 각각 정확히 100%가 되도록 조정해야
+        도시 장면이 정상적으로 그려집니다.
+    </div>
+    """, unsafe_allow_html=True)
     st.stop()
 
-model_result = run_model_or_fallback(
-    welfare,
-    education,
-    energy_infra,
-    general_infra,
-    safety,
-    solar,
-    hydrogen,
-    ess,
-    external,
+
+result = run_model_or_fallback(
+    welfare, education, energy_infra, general_infra, safety,
+    solar, hydrogen, ess, external
 )
 
-game_html = make_game_html(
+scene_html = make_main_scene_html(
     preset_choice,
-    welfare,
-    education,
-    energy_infra,
-    general_infra,
-    safety,
-    solar,
-    hydrogen,
-    ess,
-    external,
-    model_result,
-    dashboard_url,
+    welfare, education, energy_infra, general_infra, safety,
+    solar, hydrogen, ess, external,
+    result,
+    dashboard_url
 )
 
-components.html(
-    game_html,
-    height=2050,
-    scrolling=True,
-)
+components.html(scene_html, height=2450, scrolling=True)
 
-st.markdown("### 발표 연결 문장 예시")
-st.markdown(
-    """
-    이 1차 시뮬레이션은 예산과 에너지 배분이 도시 안에서 어떤 시설과 생활환경으로 구현되는지를 게임처럼 보여줍니다.  
-    이제 같은 입력값을 2차 대시보드에서 확인하면서, 실제 시민 만족도와 에너지 자립률이 어떻게 달라졌는지 분석하겠습니다.
-    """
-)
+st.markdown("### 발표용 연결 멘트 예시")
+st.markdown("""
+이 1차 시뮬레이션은 예산과 에너지 배분을 아이템처럼 시각화해서, 내가 어떤 처치를 했고 그 처치가 어느 구역에 어떻게 적용되었는지 보여줍니다.  
+이제 같은 입력값을 2차 대시보드에서 확인하면서, 실제 시민 만족도와 에너지 자립률을 정량적으로 분석하겠습니다.
+""")
