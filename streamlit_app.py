@@ -1,12 +1,13 @@
 """
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-NOVA시 게임형 스마트시티 정책 처치 시뮬레이션
+NOVA시 고도화 게임형 스마트시티 시뮬레이션
 simulation_story.py
 
 역할:
-- 기존 dashboard.py는 건드리지 않음
-- 1차 결과물: 예산·에너지 배분 처치가 A~E구역의 도시 구조를 바꾸는 장면을 게임처럼 표현
-- 2차 결과물: 기존 dashboard.py에서 만족도, 자립률, 시나리오 비교를 상세 분석
+- 기존 dashboard.py는 2차 정량 분석 대시보드로 유지
+- 이 파일은 1차 게임형 시각화 앱
+- 예산·에너지 배분을 바꾸면 하나의 거대한 마을 맵에서
+  건물, 시민, 도로, 에너지 설비, 만족도 반응이 함께 변화함
 
 실행:
 streamlit run simulation_story.py
@@ -21,6 +22,7 @@ numpy
 
 import os
 import sys
+import math
 import html as html_lib
 import urllib.parse
 from itertools import cycle
@@ -43,16 +45,17 @@ try:
         BudgetAllocationError, LowSatisfactionWarning, EnergyAllocationError
     )
     HAS_CLASSES = True
+    IMPORT_ERROR_MESSAGE = ""
 except Exception as import_error:
     HAS_CLASSES = False
     IMPORT_ERROR_MESSAGE = str(import_error)
 
 
 # ==================================================
-# Streamlit 페이지 설정
+# 페이지 설정
 # ==================================================
 st.set_page_config(
-    page_title="NOVA시 게임형 정책 시뮬레이션",
+    page_title="NOVA시 게임형 스마트시티 시뮬레이션",
     page_icon="🎮",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -60,7 +63,7 @@ st.set_page_config(
 
 
 # ==================================================
-# 기존 dashboard.py와 동일한 프리셋
+# dashboard.py와 같은 프리셋
 # ==================================================
 PRESETS = {
     "직접 입력": None,
@@ -136,14 +139,21 @@ DISTRICT_KEYS = [
 ]
 
 
+# 하나의 큰 지도 안에서 각 구역이 차지하는 위치
+# x, y, w, h는 CSS absolute position 기준
 DISTRICT_INFO = {
     "A구역(산업단지)": {
-        "short": "A구역",
-        "name": "산업단지",
+        "short": "A",
+        "label": "A구역 산업단지",
         "main_icon": "🏭",
         "desc": "근로자 중심 · 이동성·일자리 민감",
+        "x": 68,
+        "y": 405,
+        "w": 255,
+        "h": 220,
         "theme": "industry",
         "base_icons": ["🏭", "🏢", "🏗️"],
+        "people": ["👷", "👩‍🏭", "🧑‍💼", "👨‍🔧"],
         "weights": {
             "welfare": 0.45,
             "education": 0.35,
@@ -154,12 +164,17 @@ DISTRICT_INFO = {
     },
 
     "B구역(대학가)": {
-        "short": "B구역",
-        "name": "대학가",
+        "short": "B",
+        "label": "B구역 대학가",
         "main_icon": "🎓",
         "desc": "학생 중심 · 교육·문화 민감",
+        "x": 328,
+        "y": 135,
+        "w": 275,
+        "h": 220,
         "theme": "campus",
         "base_icons": ["🏫", "🏛️", "🏠"],
+        "people": ["🧑‍🎓", "👩‍🎓", "🧑‍💻", "📚"],
         "weights": {
             "welfare": 0.35,
             "education": 1.60,
@@ -170,12 +185,17 @@ DISTRICT_INFO = {
     },
 
     "C구역(복지타운)": {
-        "short": "C구역",
-        "name": "복지타운",
+        "short": "C",
+        "label": "C구역 복지타운",
         "main_icon": "🏥",
         "desc": "노인·취약계층 중심 · 복지·안전 민감",
+        "x": 860,
+        "y": 130,
+        "w": 285,
+        "h": 235,
         "theme": "welfare",
         "base_icons": ["🏥", "🏘️", "🏠"],
+        "people": ["👵", "👴", "👩‍⚕️", "🧓"],
         "weights": {
             "welfare": 1.65,
             "education": 0.35,
@@ -186,12 +206,17 @@ DISTRICT_INFO = {
     },
 
     "D구역(신도시)": {
-        "short": "D구역",
-        "name": "신도시",
+        "short": "D",
+        "label": "D구역 신도시",
         "main_icon": "🏙️",
         "desc": "혼합형 시민 구성 · 균형 정책 반응",
+        "x": 555,
+        "y": 395,
+        "w": 300,
+        "h": 240,
         "theme": "newtown",
         "base_icons": ["🏙️", "🏢", "🏬"],
+        "people": ["👨‍👩‍👧", "🧑‍💼", "👩‍💻", "🧑"],
         "weights": {
             "welfare": 0.90,
             "education": 0.90,
@@ -202,12 +227,17 @@ DISTRICT_INFO = {
     },
 
     "E구역(구도심)": {
-        "short": "E구역",
-        "name": "구도심",
+        "short": "E",
+        "label": "E구역 구도심",
         "main_icon": "🏚️",
         "desc": "노후 인프라 · 복지·안전·생활SOC 민감",
+        "x": 930,
+        "y": 430,
+        "w": 270,
+        "h": 225,
         "theme": "oldtown",
         "base_icons": ["🏚️", "🏠", "🏘️"],
+        "people": ["🧑", "👵", "👴", "👨‍👩‍👧"],
         "weights": {
             "welfare": 1.15,
             "education": 0.55,
@@ -220,7 +250,7 @@ DISTRICT_INFO = {
 
 
 # ==================================================
-# 기존 dashboard.py와 같은 도시 초기화
+# 기존 dashboard.py와 동일한 도시 생성
 # ==================================================
 @st.cache_resource
 def get_city():
@@ -282,10 +312,6 @@ def run_simulation_from_classes(
     ess,
     external,
 ):
-    """
-    dashboard.py의 run_simulation()과 같은 방식으로 classes.py 모델을 실행한다.
-    실패하면 None, error_message를 반환한다.
-    """
     if not HAS_CLASSES:
         return None, "classes.py를 불러오지 못했습니다."
 
@@ -329,11 +355,6 @@ def run_model_or_fallback(
     ess,
     external,
 ):
-    """
-    우선 classes.py 기반 실제 모델을 사용한다.
-    만약 Streamlit Cloud에서 import 문제나 예상치 못한 오류가 발생해도
-    게임형 화면이 죽지 않도록 화면용 fallback 계산을 사용한다.
-    """
     result, err = run_simulation_from_classes(
         welfare,
         education,
@@ -362,7 +383,7 @@ def run_model_or_fallback(
             "raw_result": result,
         }
 
-    # fallback: 화면이 깨지지 않도록 보조 계산
+    # 보조 계산: 실제 모델이 실패해도 발표 화면은 유지되도록 함
     energy_rate = expected_energy_self_rate(solar, hydrogen, ess, external)
     energy_bonus = (energy_rate - 0.4) * 18
 
@@ -434,7 +455,7 @@ def run_model_or_fallback(
 
 
 # ==================================================
-# 화면 생성 유틸
+# 시각화 유틸
 # ==================================================
 def score_face(score):
     if score < 50:
@@ -470,30 +491,9 @@ def clamp(value, low, high):
     return max(low, min(high, value))
 
 
-def icon_count(value, weight=1.0, max_icons=8, divisor=10):
-    """
-    예산 비율을 건물 개수로 변환한다.
-    값이 높을수록 해당 구역에 더 많은 시설이 생긴다.
-    """
+def icon_count(value, weight=1.0, max_icons=9, divisor=10):
     count = round((value * weight) / divisor)
     return clamp(count, 0, max_icons)
-
-
-def make_icon_spans(symbols, count, base_delay=1.0, cls="facility"):
-    if count <= 0:
-        return ""
-
-    symbol_cycle = cycle(symbols)
-    result = []
-
-    for i in range(count):
-        symbol = next(symbol_cycle)
-        delay = base_delay + i * 0.11
-        result.append(
-            f'<span class="{cls}" style="animation-delay:{delay:.2f}s">{symbol}</span>'
-        )
-
-    return "".join(result)
 
 
 def build_query_string(
@@ -570,241 +570,375 @@ def make_dashboard_link(
     """
 
 
-def make_people(score, district_index):
-    face = score_face(score)
-    people = []
+def local_positions(count, width, height, start_x=18, start_y=36):
+    positions = []
+    if count <= 0:
+        return positions
 
-    for i in range(7):
-        delay = 9.0 + district_index * 0.25 + i * 0.12
-        top = 70 + (i % 2) * 14
-        left = 7 + i * 12
+    cols = 4
+    gap_x = max(34, (width - 45) / cols)
+    gap_y = 39
 
-        people.append(
-            f"""
-            <span class="citizen"
-                  style="left:{left}%; top:{top}%; animation-delay:{delay:.2f}s">
-                {face}
-            </span>
-            """
-        )
+    for i in range(count):
+        col = i % cols
+        row = i // cols
+        x = start_x + col * gap_x + (row % 2) * 9
+        y = start_y + row * gap_y
+        x = min(width - 42, x)
+        y = min(height - 78, y)
+        positions.append((x, y))
 
-    return "".join(people)
-
-
-def make_vehicle_icons(general_infra, safety, district_index):
-    buses = icon_count(general_infra, 0.80, 3, divisor=18)
-    police = icon_count(safety, 0.75, 3, divisor=18)
-
-    items = []
-
-    for i in range(buses):
-        delay = 6.2 + district_index * 0.2 + i * 0.35
-        items.append(
-            f'<span class="vehicle bus" style="animation-delay:{delay:.2f}s">🚌</span>'
-        )
-
-    for i in range(police):
-        delay = 6.9 + district_index * 0.2 + i * 0.35
-        items.append(
-            f'<span class="vehicle police" style="animation-delay:{delay:.2f}s">🚓</span>'
-        )
-
-    return "".join(items)
+    return positions
 
 
-def district_facilities(
+def make_building(
+    icon,
+    label,
+    x,
+    y,
+    delay,
+    category,
+    size="normal",
+):
+    return f"""
+    <div class="building building-{category} building-{size}"
+         style="left:{x:.1f}px; top:{y:.1f}px; animation-delay:{delay:.2f}s;"
+         title="{html_lib.escape(label)}">
+        <div class="building-shadow"></div>
+        <div class="building-icon">{icon}</div>
+    </div>
+    """
+
+
+def make_district_buildings(
     district_key,
     welfare,
     education,
     energy_infra,
     general_infra,
     safety,
-    district_index,
+    idx,
 ):
     info = DISTRICT_INFO[district_key]
     weights = info["weights"]
+    w = info["w"]
+    h = info["h"]
 
-    base = make_icon_spans(
-        info["base_icons"],
-        3,
-        0.6 + district_index * 0.12,
-        cls="facility base-building",
-    )
+    buildings = []
 
-    welfare_icons = make_icon_spans(
-        ["🏥", "👩‍⚕️", "🏘️", "🤝"],
-        icon_count(welfare, weights["welfare"], 8, divisor=10),
-        1.5 + district_index * 0.12,
-    )
+    base_positions = local_positions(3, w, h, start_x=18, start_y=34)
+    for i, (x, y) in enumerate(base_positions):
+        icon = info["base_icons"][i % len(info["base_icons"])]
+        buildings.append(
+            make_building(
+                icon=icon,
+                label=f"{info['label']} 기본 건물",
+                x=x,
+                y=y,
+                delay=0.4 + idx * 0.08 + i * 0.12,
+                category="base",
+                size="large",
+            )
+        )
 
-    education_icons = make_icon_spans(
-        ["🏫", "📚", "🎓", "🏛️"],
-        icon_count(education, weights["education"], 8, divisor=10),
-        2.4 + district_index * 0.12,
-    )
+    categories = [
+        {
+            "name": "welfare",
+            "value": welfare,
+            "weight": weights["welfare"],
+            "icons": ["🏥", "👩‍⚕️", "🏘️", "🤝"],
+            "label": "복지 시설",
+            "delay": 1.4,
+            "start_x": 20,
+            "start_y": 102,
+        },
+        {
+            "name": "education",
+            "value": education,
+            "weight": weights["education"],
+            "icons": ["🏫", "📚", "🎓", "🏛️"],
+            "label": "교육 시설",
+            "delay": 2.2,
+            "start_x": 70,
+            "start_y": 100,
+        },
+        {
+            "name": "energy",
+            "value": energy_infra,
+            "weight": weights["energy_infra"],
+            "icons": ["🔌", "📡", "🚗", "💡"],
+            "label": "에너지 인프라",
+            "delay": 3.0,
+            "start_x": 122,
+            "start_y": 98,
+        },
+        {
+            "name": "infra",
+            "value": general_infra,
+            "weight": weights["general_infra"],
+            "icons": ["🌳", "🚏", "🏞️", "🚌", "🛣️"],
+            "label": "생활 인프라",
+            "delay": 3.8,
+            "start_x": 40,
+            "start_y": 154,
+        },
+        {
+            "name": "safety",
+            "value": safety,
+            "weight": weights["safety"],
+            "icons": ["👮", "📹", "🚒", "🚓", "🛡️"],
+            "label": "안전 시설",
+            "delay": 4.6,
+            "start_x": 104,
+            "start_y": 154,
+        },
+    ]
 
-    energy_icons = make_icon_spans(
-        ["🔌", "📡", "🚗", "💡"],
-        icon_count(energy_infra, weights["energy_infra"], 8, divisor=10),
-        3.3 + district_index * 0.12,
-    )
+    for cat in categories:
+        count = icon_count(cat["value"], cat["weight"], max_icons=7, divisor=10)
+        positions = local_positions(
+            count,
+            w,
+            h,
+            start_x=cat["start_x"],
+            start_y=cat["start_y"],
+        )
+        icon_cycle = cycle(cat["icons"])
 
-    infra_icons = make_icon_spans(
-        ["🌳", "🛣️", "🚌", "🚏", "🏞️"],
-        icon_count(general_infra, weights["general_infra"], 8, divisor=10),
-        4.2 + district_index * 0.12,
-    )
+        for j, (x, y) in enumerate(positions):
+            buildings.append(
+                make_building(
+                    icon=next(icon_cycle),
+                    label=cat["label"],
+                    x=x,
+                    y=y,
+                    delay=cat["delay"] + idx * 0.10 + j * 0.09,
+                    category=cat["name"],
+                )
+            )
 
-    safety_icons = make_icon_spans(
-        ["👮", "📹", "🚒", "🚓", "🛡️"],
-        icon_count(safety, weights["safety"], 8, divisor=10),
-        5.1 + district_index * 0.12,
-    )
-
-    return base + welfare_icons + education_icons + energy_icons + infra_icons + safety_icons
+    return "".join(buildings)
 
 
-def make_district_card(
+def make_citizens_for_district(district_key, score, idx):
+    info = DISTRICT_INFO[district_key]
+    people_cycle = cycle(info["people"])
+    face = score_face(score)
+    color = score_color(score)
+
+    citizens = []
+
+    for i in range(9):
+        person = next(people_cycle)
+        delay = 6.8 + idx * 0.18 + i * 0.14
+        x = 18 + (i * 23) % max(120, info["w"] - 40)
+        y = info["h"] - 54 - (i % 3) * 10
+        walk = 14 + (i % 4) * 8
+
+        citizens.append(
+            f"""
+            <div class="villager"
+                 style="
+                    left:{x:.1f}px;
+                    top:{y:.1f}px;
+                    --walk:{walk}px;
+                    --mood-color:{color};
+                    animation-delay:{delay:.2f}s;
+                 ">
+                <div class="villager-face">{person}</div>
+                <div class="villager-mood">{face}</div>
+            </div>
+            """
+        )
+
+    return "".join(citizens)
+
+
+def make_district_zone(
     district_key,
     score,
-    district_index,
     welfare,
     education,
     energy_infra,
     general_infra,
     safety,
+    idx,
 ):
     info = DISTRICT_INFO[district_key]
     color = score_color(score)
     face = score_face(score)
     mood = score_mood(score)
 
-    facilities = district_facilities(
+    buildings = make_district_buildings(
         district_key,
         welfare,
         education,
         energy_infra,
         general_infra,
         safety,
-        district_index,
+        idx,
     )
 
-    citizens = make_people(score, district_index)
-    vehicles = make_vehicle_icons(general_infra, safety, district_index)
+    citizens = make_citizens_for_district(district_key, score, idx)
 
     return f"""
-    <div class="district-card district-{district_index + 1}">
-        <div class="district-banner">
-            <div class="district-main-icon">{info["main_icon"]}</div>
+    <div class="district-zone zone-{idx + 1}"
+         style="
+            left:{info['x']}px;
+            top:{info['y']}px;
+            width:{info['w']}px;
+            height:{info['h']}px;
+         ">
+        <div class="zone-label">
+            <div class="zone-main-icon">{info['main_icon']}</div>
             <div>
-                <div class="district-title">{info["short"]} · {info["name"]}</div>
-                <div class="district-desc">{info["desc"]}</div>
+                <div class="zone-title">{info['label']}</div>
+                <div class="zone-desc">{info['desc']}</div>
             </div>
         </div>
 
-        <div class="district-map">
-            <div class="green-patch patch-a"></div>
-            <div class="green-patch patch-b"></div>
-            <div class="water-tile"></div>
-            <div class="district-road road-a"></div>
-            <div class="district-road road-b"></div>
-
-            <div class="facility-layer">
-                {facilities}
-            </div>
-
-            <div class="vehicle-layer">
-                {vehicles}
-            </div>
-
-            <div class="citizen-layer">
-                {citizens}
-            </div>
+        <div class="zone-ground">
+            <div class="mini-road road-horizontal"></div>
+            <div class="mini-road road-vertical"></div>
+            {buildings}
+            {citizens}
         </div>
 
-        <div class="district-status">
-            <div class="mood-face">{face}</div>
-            <div class="mood-detail">
-                <div class="mood-label">시민 반응 · {mood}</div>
-                <div class="mood-bar">
-                    <div class="mood-fill"
+        <div class="zone-score">
+            <div class="score-face">{face}</div>
+            <div class="score-mid">
+                <div class="score-label">시민 만족도 · {mood}</div>
+                <div class="score-bar">
+                    <div class="score-fill"
                          style="--score-width:{score:.1f}%; --score-color:{color};">
                     </div>
                 </div>
             </div>
-            <div class="mood-score" style="color:{color};">{score:.1f}</div>
+            <div class="score-num" style="color:{color};">{score:.1f}</div>
         </div>
     </div>
     """
 
 
-def make_energy_zone(solar, hydrogen, ess, external):
-    solar_icons = make_icon_spans(
-        ["☀️", "🔆", "🏠"],
-        icon_count(solar, 1.15, 13, divisor=9),
-        6.0,
-        cls="energy-icon"
-    )
+def make_vehicle_stream(general_infra, safety):
+    bus_count = icon_count(general_infra, 1.0, max_icons=5, divisor=16)
+    police_count = icon_count(safety, 1.0, max_icons=4, divisor=18)
 
-    hydrogen_icons = make_icon_spans(
-        ["💧", "⚗️", "🏭"],
-        icon_count(hydrogen, 1.15, 13, divisor=9),
-        6.4,
-        cls="energy-icon"
-    )
+    html = ""
 
-    ess_icons = make_icon_spans(
-        ["🔋", "⚡"],
-        icon_count(ess, 1.20, 13, divisor=9),
-        6.8,
-        cls="energy-icon"
-    )
+    for i in range(bus_count):
+        delay = i * 1.25
+        html += f"""
+        <div class="world-vehicle bus"
+             style="top:{392 + (i % 2) * 26}px; animation-delay:{delay:.2f}s;">
+            🚌
+        </div>
+        """
 
-    external_icons = make_icon_spans(
-        ["🗼", "🔌"],
-        icon_count(external, 1.05, 13, divisor=9),
-        7.2,
-        cls="energy-icon"
-    )
+    for i in range(police_count):
+        delay = 0.7 + i * 1.35
+        html += f"""
+        <div class="world-vehicle police"
+             style="top:{642 + (i % 2) * 22}px; animation-delay:{delay:.2f}s;">
+            🚓
+        </div>
+        """
 
+    return html
+
+
+def make_energy_facility_icon(icon, label, x, y, delay):
     return f"""
-    <section class="energy-board">
-        <div class="section-heading">
-            <div>
-                <div class="section-title">⚡ 도시 외곽 에너지 설비</div>
-                <div class="section-subtitle">
-                    에너지 배분값이 높을수록 해당 발전·저장 설비가 더 많이 생깁니다.
-                </div>
-            </div>
-        </div>
-
-        <div class="energy-grid">
-            <div class="energy-card solar">
-                <div class="energy-card-title">태양광 단지</div>
-                <div class="energy-card-desc">태양광 {solar}%</div>
-                <div class="energy-icon-field">{solar_icons}</div>
-            </div>
-
-            <div class="energy-card hydrogen">
-                <div class="energy-card-title">수소연료전지</div>
-                <div class="energy-card-desc">수소 {hydrogen}%</div>
-                <div class="energy-icon-field">{hydrogen_icons}</div>
-            </div>
-
-            <div class="energy-card ess">
-                <div class="energy-card-title">ESS 저장소</div>
-                <div class="energy-card-desc">ESS {ess}%</div>
-                <div class="energy-icon-field">{ess_icons}</div>
-            </div>
-
-            <div class="energy-card external">
-                <div class="energy-card-title">외부전력망</div>
-                <div class="energy-card-desc">외부전력망 {external}%</div>
-                <div class="energy-icon-field">{external_icons}</div>
-            </div>
-        </div>
-    </section>
+    <div class="energy-building"
+         style="left:{x}px; top:{y}px; animation-delay:{delay:.2f}s;"
+         title="{html_lib.escape(label)}">
+        <div class="energy-building-icon">{icon}</div>
+    </div>
     """
+
+
+def make_energy_world(solar, hydrogen, ess, external):
+    html = ""
+
+    solar_count = icon_count(solar, 1.15, max_icons=9, divisor=9)
+    hydrogen_count = icon_count(hydrogen, 1.15, max_icons=8, divisor=9)
+    ess_count = icon_count(ess, 1.20, max_icons=8, divisor=9)
+    external_count = icon_count(external, 1.0, max_icons=7, divisor=10)
+
+    for i in range(solar_count):
+        x = 55 + (i % 5) * 44
+        y = 72 + (i // 5) * 42
+        html += make_energy_facility_icon("☀️", "태양광 설비", x, y, 5.3 + i * 0.08)
+
+    for i in range(hydrogen_count):
+        x = 965 + (i % 4) * 48
+        y = 58 + (i // 4) * 44
+        html += make_energy_facility_icon("💧", "수소연료전지", x, y, 5.7 + i * 0.08)
+
+    for i in range(ess_count):
+        x = 1040 + (i % 4) * 42
+        y = 715 + (i // 4) * 38
+        html += make_energy_facility_icon("🔋", "ESS 저장소", x, y, 6.1 + i * 0.08)
+
+    for i in range(external_count):
+        x = 55 + (i % 4) * 46
+        y = 712 + (i // 4) * 40
+        html += make_energy_facility_icon("🗼", "외부전력망", x, y, 6.5 + i * 0.08)
+
+    return html
+
+
+def make_need_summary_cards(welfare, education, energy_infra, general_infra, safety):
+    items = [
+        ("복지", welfare, "🏥", "병원·돌봄센터·복지관"),
+        ("교육", education, "🏫", "학교·도서관·평생학습"),
+        ("에너지 인프라", energy_infra, "🔌", "충전소·스마트그리드"),
+        ("일반 인프라", general_infra, "🚌", "도로·버스·공원"),
+        ("안전", safety, "👮", "경찰·CCTV·소방"),
+    ]
+
+    html = ""
+
+    for label, value, icon, desc in items:
+        html += f"""
+        <div class="policy-card">
+            <div class="policy-icon">{icon}</div>
+            <div class="policy-name">{label}</div>
+            <div class="policy-value">{value}%</div>
+            <div class="policy-bar">
+                <div class="policy-fill" style="width:{value}%;"></div>
+            </div>
+            <div class="policy-desc">{desc}</div>
+        </div>
+        """
+
+    return html
+
+
+def make_energy_summary_cards(solar, hydrogen, ess, external):
+    items = [
+        ("태양광", solar, "☀️", "지붕형 패널·분산 발전"),
+        ("수소연료전지", hydrogen, "💧", "안정형 발전 설비"),
+        ("ESS", ess, "🔋", "에너지 저장 시설"),
+        ("외부전력망", external, "🗼", "도시 외부 의존"),
+    ]
+
+    html = ""
+
+    for label, value, icon, desc in items:
+        html += f"""
+        <div class="energy-policy-card">
+            <div class="policy-icon">{icon}</div>
+            <div class="policy-name">{label}</div>
+            <div class="policy-value">{value}%</div>
+            <div class="policy-bar">
+                <div class="policy-fill energy-fill" style="width:{value}%;"></div>
+            </div>
+            <div class="policy-desc">{desc}</div>
+        </div>
+        """
+
+    return html
 
 
 def make_game_html(
@@ -829,18 +963,20 @@ def make_game_html(
     model_source = model_result["source"]
 
     district_html = ""
-
     for idx, key in enumerate(DISTRICT_KEYS):
-        district_html += make_district_card(
+        district_html += make_district_zone(
             key,
             scores[key],
-            idx,
             welfare,
             education,
             energy_infra,
             general_infra,
             safety,
+            idx,
         )
+
+    vehicles = make_vehicle_stream(general_infra, safety)
+    energy_world = make_energy_world(solar, hydrogen, ess, external)
 
     warning_text = f"{len(warnings)}개 구역 주의" if warnings else "위험 구역 없음"
     warning_color = "#cf222e" if warnings else "#1a7f37"
@@ -866,6 +1002,21 @@ def make_game_html(
         </div>
         """
 
+    policy_cards = make_need_summary_cards(
+        welfare,
+        education,
+        energy_infra,
+        general_infra,
+        safety,
+    )
+
+    energy_cards = make_energy_summary_cards(
+        solar,
+        hydrogen,
+        ess,
+        external,
+    )
+
     css = """
     <style>
     :root {
@@ -878,9 +1029,9 @@ def make_game_html(
         --yellow: #9a6700;
         --purple: #8250df;
         --sky: #ddf4ff;
-        --grass: #b7e4a8;
-        --grass-dark: #6ab04c;
-        --road: #737b85;
+        --grass: #a8db98;
+        --grass2: #b7e4a8;
+        --road: #6e7781;
         --water: #74c0fc;
     }
 
@@ -904,13 +1055,13 @@ def make_game_html(
         position: relative;
         overflow: hidden;
         border-radius: 30px;
-        min-height: 245px;
-        padding: 30px 34px;
+        min-height: 250px;
+        padding: 32px 36px;
         color: white;
         background:
             radial-gradient(circle at 12% 25%, rgba(255,255,255,0.20), transparent 18%),
             radial-gradient(circle at 88% 20%, rgba(255,255,255,0.16), transparent 20%),
-            linear-gradient(135deg, #a3652f 0%, #cd7c35 42%, #e3a04d 100%);
+            linear-gradient(135deg, #9a5a2f 0%, #c77936 42%, #e2a24d 100%);
         box-shadow: 0 18px 42px rgba(163,101,47,0.22);
         margin-bottom: 18px;
     }
@@ -970,7 +1121,7 @@ def make_game_html(
 
     .resource-row {
         display: grid;
-        grid-template-columns: 42px 1fr 82px;
+        grid-template-columns: 42px 1fr 88px;
         align-items: center;
         gap: 10px;
         padding: 8px 0;
@@ -1091,57 +1242,62 @@ def make_game_html(
         line-height: 1.6;
     }
 
-    .timeline {
+    .policy-summary-grid {
         display: grid;
         grid-template-columns: repeat(5, 1fr);
         gap: 12px;
         margin-bottom: 18px;
     }
 
-    .timeline-step {
-        background: #f6f8fa;
+    .policy-card,
+    .energy-policy-card {
+        background: #ffffff;
         border: 1px solid var(--line);
-        border-radius: 20px;
-        padding: 14px 12px;
-        text-align: center;
-        min-height: 126px;
-        animation: stepFocus 11s ease both;
+        border-radius: 18px;
+        padding: 14px 14px;
+        min-height: 142px;
+        box-shadow: 0 8px 20px rgba(27,31,36,0.05);
     }
 
-    .timeline-step:nth-child(1) { animation-delay: 0.0s; }
-    .timeline-step:nth-child(2) { animation-delay: 2.0s; }
-    .timeline-step:nth-child(3) { animation-delay: 4.0s; }
-    .timeline-step:nth-child(4) { animation-delay: 6.0s; }
-    .timeline-step:nth-child(5) { animation-delay: 8.0s; }
-
-    @keyframes stepFocus {
-        0%, 16% {
-            background: linear-gradient(135deg, #ddf4ff 0%, #ffffff 100%);
-            border-color: var(--blue);
-            box-shadow: 0 10px 24px rgba(9,105,218,0.15);
-            transform: translateY(-3px);
-        }
-        24%, 100% {
-            background: #f6f8fa;
-            border-color: var(--line);
-            box-shadow: none;
-            transform: translateY(0);
-        }
+    .policy-icon {
+        font-size: 26px;
+        margin-bottom: 6px;
     }
 
-    .timeline-icon {
-        font-size: 30px;
+    .policy-name {
+        font-size: 13px;
+        font-weight: 950;
+        color: var(--ink);
+        margin-bottom: 4px;
+    }
+
+    .policy-value {
+        font-size: 22px;
+        font-weight: 950;
+        color: var(--blue);
         margin-bottom: 8px;
     }
 
-    .timeline-title {
-        font-size: 14px;
-        font-weight: 950;
-        margin-bottom: 5px;
+    .policy-bar {
+        height: 8px;
+        background: #d0d7de;
+        border-radius: 999px;
+        overflow: hidden;
+        margin-bottom: 7px;
     }
 
-    .timeline-desc {
-        font-size: 12px;
+    .policy-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #0969da, #8250df);
+        border-radius: 999px;
+    }
+
+    .energy-fill {
+        background: linear-gradient(90deg, #1a7f37, #d29922);
+    }
+
+    .policy-desc {
+        font-size: 11px;
         color: var(--muted);
         line-height: 1.45;
     }
@@ -1167,28 +1323,29 @@ def make_game_html(
         line-height: 1.6;
     }
 
-    .city-board {
+    .world-board {
         position: relative;
+        width: 1280px;
+        height: 860px;
         overflow: hidden;
         border: 1px solid var(--line);
-        border-radius: 32px;
-        padding: 22px;
+        border-radius: 34px;
+        margin-bottom: 24px;
         background:
-            linear-gradient(180deg, #ddf4ff 0%, #f8fcff 32%, #eaf8e1 100%);
+            linear-gradient(180deg, #ddf4ff 0%, #ecf8ff 22%, #eaf8e1 55%, #cce6b6 100%);
         box-shadow:
             inset 0 0 0 1px rgba(255,255,255,0.8),
-            0 14px 34px rgba(27,31,36,0.08);
-        margin-bottom: 22px;
+            0 18px 42px rgba(27,31,36,0.10);
     }
 
-    .city-board::before {
+    .world-board::before {
         content: "☀️";
         position: absolute;
-        top: 20px;
-        right: 28px;
-        font-size: 58px;
-        animation: sunSpin 12s linear infinite;
-        z-index: 1;
+        top: 22px;
+        right: 34px;
+        font-size: 62px;
+        animation: sunSpin 14s linear infinite;
+        z-index: 4;
     }
 
     @keyframes sunSpin {
@@ -1196,402 +1353,553 @@ def make_game_html(
         to { transform: rotate(360deg); }
     }
 
+    .mountain {
+        position: absolute;
+        font-size: 82px;
+        opacity: 0.88;
+        z-index: 1;
+        filter: drop-shadow(0 8px 8px rgba(27,31,36,0.12));
+    }
+
+    .mountain.m1 { left: 1010px; top: 12px; }
+    .mountain.m2 { left: 1070px; top: 6px; }
+    .mountain.m3 { left: 1140px; top: 20px; }
+
     .cloud {
         position: absolute;
         font-size: 42px;
-        opacity: 0.65;
-        z-index: 1;
-        animation: cloudMove 10s ease-in-out infinite alternate;
+        opacity: 0.72;
+        z-index: 3;
+        animation: cloudMove 12s ease-in-out infinite alternate;
     }
 
-    .cloud.one { top: 58px; left: 5%; }
-    .cloud.two { top: 34px; left: 42%; animation-delay: 1.5s; }
+    .cloud.c1 { left: 110px; top: 48px; }
+    .cloud.c2 { left: 520px; top: 70px; animation-delay: 1.5s; }
+    .cloud.c3 { left: 795px; top: 35px; animation-delay: 2.3s; }
 
     @keyframes cloudMove {
         from { transform: translateX(0); }
-        to { transform: translateX(42px); }
+        to { transform: translateX(48px); }
     }
 
-    .map-container {
-        position: relative;
-        z-index: 2;
-    }
-
-    .city-grid {
-        display: grid;
-        grid-template-columns: repeat(5, 1fr);
-        gap: 14px;
-    }
-
-    .district-card {
-        position: relative;
-        background:
-            linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.88));
-        border: 1px solid var(--line);
-        border-radius: 26px;
-        padding: 15px 13px;
-        min-height: 430px;
-        overflow: hidden;
-        box-shadow: 0 10px 24px rgba(27,31,36,0.08);
-        animation: districtAppear 0.8s ease both;
-    }
-
-    .district-1 { animation-delay: 0.2s; }
-    .district-2 { animation-delay: 0.35s; }
-    .district-3 { animation-delay: 0.50s; }
-    .district-4 { animation-delay: 0.65s; }
-    .district-5 { animation-delay: 0.80s; }
-
-    @keyframes districtAppear {
-        from { transform: translateY(18px) scale(0.98); opacity: 0; }
-        to { transform: translateY(0) scale(1); opacity: 1; }
-    }
-
-    .district-banner {
-        display: grid;
-        grid-template-columns: 48px 1fr;
-        gap: 10px;
-        align-items: center;
-        margin-bottom: 12px;
-    }
-
-    .district-main-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 18px;
-        background: #f6f8fa;
-        border: 1px solid var(--line);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 27px;
-    }
-
-    .district-title {
-        font-size: 15px;
-        font-weight: 950;
-        color: var(--ink);
-        margin-bottom: 3px;
-    }
-
-    .district-desc {
-        font-size: 11px;
-        color: var(--muted);
-        line-height: 1.35;
-    }
-
-    .district-map {
-        position: relative;
-        height: 270px;
-        border-radius: 22px;
-        overflow: hidden;
-        border: 1px dashed #b9c0c9;
-        background:
-            linear-gradient(135deg, rgba(255,255,255,0.55), rgba(255,255,255,0.20)),
-            repeating-linear-gradient(45deg, #b7e4a8 0 18px, #a8db98 18px 36px);
-        margin-bottom: 12px;
-    }
-
-    .district-map::before {
-        content: "";
+    .river {
         position: absolute;
-        inset: 0;
+        left: -80px;
+        top: 610px;
+        width: 1500px;
+        height: 88px;
         background:
-            radial-gradient(circle at 20% 22%, rgba(255,255,255,0.35) 0 20px, transparent 21px),
-            radial-gradient(circle at 78% 70%, rgba(255,255,255,0.30) 0 24px, transparent 25px);
-        pointer-events: none;
-    }
-
-    .green-patch {
-        position: absolute;
-        background: #57ab5a;
-        border-radius: 50%;
-        opacity: 0.85;
-        z-index: 1;
-    }
-
-    .patch-a {
-        width: 55px;
-        height: 40px;
-        left: 9%;
-        top: 10%;
-    }
-
-    .patch-b {
-        width: 62px;
-        height: 46px;
-        right: 9%;
-        bottom: 12%;
-    }
-
-    .water-tile {
-        position: absolute;
-        width: 120px;
-        height: 38px;
-        right: -16px;
-        top: 118px;
-        background: #74c0fc;
+            repeating-linear-gradient(
+                115deg,
+                rgba(255,255,255,0.35) 0 10px,
+                rgba(255,255,255,0.05) 10px 22px
+            ),
+            #74c0fc;
+        transform: rotate(-7deg);
         border-radius: 999px;
-        opacity: 0.78;
-        transform: rotate(-22deg);
+        opacity: 0.88;
         z-index: 1;
-        box-shadow: inset 0 0 0 4px rgba(255,255,255,0.25);
+        box-shadow: inset 0 0 0 6px rgba(255,255,255,0.18);
     }
 
-    .district-road {
+    .world-road {
         position: absolute;
         background: #737b85;
         z-index: 2;
-        box-shadow: inset 0 0 0 2px rgba(255,255,255,0.16);
+        box-shadow: inset 0 0 0 2px rgba(255,255,255,0.18);
     }
 
-    .road-a {
-        width: 160%;
-        height: 34px;
-        left: -30%;
-        top: 58%;
+    .world-road.r1 {
+        left: -80px;
+        top: 382px;
+        width: 1470px;
+        height: 46px;
+        transform: rotate(-7deg);
+    }
+
+    .world-road.r2 {
+        left: 420px;
+        top: -40px;
+        width: 50px;
+        height: 1000px;
+        transform: rotate(12deg);
+    }
+
+    .world-road.r3 {
+        left: 800px;
+        top: 0;
+        width: 48px;
+        height: 980px;
         transform: rotate(-14deg);
     }
 
-    .road-b {
-        width: 34px;
-        height: 150%;
-        left: 46%;
-        top: -20%;
-        transform: rotate(16deg);
+    .world-road.r4 {
+        left: -100px;
+        top: 660px;
+        width: 1500px;
+        height: 42px;
+        transform: rotate(4deg);
     }
 
-    .road-a::after,
-    .road-b::after {
+    .world-road::after {
         content: "";
         position: absolute;
-        inset: 50% 0 auto 0;
-        border-top: 2px dashed rgba(255,255,255,0.75);
+        left: 0;
+        top: 50%;
+        width: 2200px;
+        border-top: 3px dashed rgba(255,255,255,0.75);
         animation: roadDash 2.2s linear infinite;
     }
 
     @keyframes roadDash {
         from { transform: translateX(0); }
-        to { transform: translateX(-30px); }
+        to { transform: translateX(-60px); }
     }
 
-    .facility-layer {
-        position: relative;
-        z-index: 4;
-        padding: 14px;
-        height: 100%;
+    .tree {
+        position: absolute;
+        font-size: 34px;
+        z-index: 3;
+        filter: drop-shadow(0 5px 4px rgba(27,31,36,0.12));
+    }
+
+    .tree.t1 { left: 35px; top: 185px; }
+    .tree.t2 { left: 90px; top: 245px; }
+    .tree.t3 { left: 150px; top: 178px; }
+    .tree.t4 { left: 670px; top: 105px; }
+    .tree.t5 { left: 725px; top: 165px; }
+    .tree.t6 { left: 1200px; top: 350px; }
+    .tree.t7 { left: 1110px; top: 365px; }
+    .tree.t8 { left: 420px; top: 690px; }
+    .tree.t9 { left: 500px; top: 730px; }
+    .tree.t10 { left: 1180px; top: 730px; }
+
+    .world-label {
+        position: absolute;
+        left: 34px;
+        top: 28px;
+        z-index: 5;
+        background: rgba(255,255,255,0.82);
+        border: 1px solid rgba(208,215,222,0.9);
+        border-radius: 22px;
+        padding: 16px 18px;
+        box-shadow: 0 10px 24px rgba(27,31,36,0.10);
+    }
+
+    .world-label-title {
+        font-size: 23px;
+        font-weight: 950;
+        color: var(--ink);
+        margin-bottom: 4px;
+    }
+
+    .world-label-desc {
+        font-size: 13px;
+        color: var(--muted);
+        line-height: 1.55;
+    }
+
+    .district-zone {
+        position: absolute;
+        z-index: 10;
+        border-radius: 24px;
+        border: 2px solid rgba(255,255,255,0.85);
+        background:
+            linear-gradient(135deg, rgba(255,255,255,0.52), rgba(255,255,255,0.22)),
+            repeating-linear-gradient(45deg, #b7e4a8 0 18px, #a8db98 18px 36px);
+        box-shadow:
+            0 14px 28px rgba(27,31,36,0.15),
+            inset 0 0 0 1px rgba(0,0,0,0.05);
+        overflow: hidden;
+        animation: zoneAppear 0.85s ease both;
+    }
+
+    .zone-1 { animation-delay: 0.2s; }
+    .zone-2 { animation-delay: 0.35s; }
+    .zone-3 { animation-delay: 0.50s; }
+    .zone-4 { animation-delay: 0.65s; }
+    .zone-5 { animation-delay: 0.80s; }
+
+    @keyframes zoneAppear {
+        from {
+            opacity: 0;
+            transform: translateY(18px) scale(0.97);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    .zone-label {
+        position: absolute;
+        left: 10px;
+        top: 10px;
+        right: 10px;
+        z-index: 20;
+        display: grid;
+        grid-template-columns: 38px 1fr;
+        gap: 8px;
+        align-items: center;
+        padding: 8px 10px;
+        background: rgba(255,255,255,0.90);
+        border: 1px solid rgba(208,215,222,0.9);
+        border-radius: 16px;
+        box-shadow: 0 6px 14px rgba(27,31,36,0.08);
+    }
+
+    .zone-main-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 13px;
+        background: #f6f8fa;
         display: flex;
-        flex-wrap: wrap;
-        align-content: flex-start;
-        justify-content: center;
-        gap: 7px;
-    }
-
-    .facility {
-        display: inline-flex;
-        width: 36px;
-        height: 36px;
         align-items: center;
         justify-content: center;
-        font-size: 28px;
-        filter: drop-shadow(0 5px 4px rgba(27,31,36,0.18));
-        transform: scale(0.2) translateY(20px);
-        opacity: 0;
-        animation: buildingPop 0.55s cubic-bezier(.16,.84,.32,1.32) forwards;
+        font-size: 21px;
     }
 
-    .base-building {
-        width: 42px;
-        height: 42px;
-        font-size: 32px;
+    .zone-title {
+        font-size: 13px;
+        font-weight: 950;
+        color: var(--ink);
+        margin-bottom: 2px;
+    }
+
+    .zone-desc {
+        font-size: 10px;
+        color: var(--muted);
+        line-height: 1.25;
+    }
+
+    .zone-ground {
+        position: absolute;
+        inset: 0;
+        z-index: 12;
+    }
+
+    .mini-road {
+        position: absolute;
+        background: rgba(115,123,133,0.75);
+        z-index: 13;
+        box-shadow: inset 0 0 0 2px rgba(255,255,255,0.16);
+    }
+
+    .road-horizontal {
+        left: -30px;
+        top: 60%;
+        width: 140%;
+        height: 28px;
+        transform: rotate(-9deg);
+    }
+
+    .road-vertical {
+        left: 47%;
+        top: 0;
+        width: 26px;
+        height: 120%;
+        transform: rotate(13deg);
+    }
+
+    .building {
+        position: absolute;
+        z-index: 18;
+        width: 36px;
+        height: 36px;
+        opacity: 0;
+        transform: translateY(22px) scale(0.2);
+        animation: buildingPop 0.56s cubic-bezier(.16,.84,.32,1.32) forwards;
+    }
+
+    .building-large {
+        width: 44px;
+        height: 44px;
+    }
+
+    .building-shadow {
+        position: absolute;
+        left: 5px;
+        bottom: -3px;
+        width: 28px;
+        height: 9px;
+        background: rgba(27,31,36,0.20);
+        border-radius: 999px;
+        filter: blur(1px);
+    }
+
+    .building-icon {
+        position: relative;
+        z-index: 2;
+        width: 100%;
+        height: 100%;
+        font-size: 29px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        filter: drop-shadow(0 5px 3px rgba(27,31,36,0.20));
+    }
+
+    .building-large .building-icon {
+        font-size: 35px;
+    }
+
+    .building-welfare .building-icon {
+        filter: drop-shadow(0 5px 3px rgba(26,127,55,0.22));
+    }
+
+    .building-education .building-icon {
+        filter: drop-shadow(0 5px 3px rgba(9,105,218,0.22));
+    }
+
+    .building-safety .building-icon {
+        filter: drop-shadow(0 5px 3px rgba(207,34,46,0.22));
     }
 
     @keyframes buildingPop {
-        0% { opacity: 0; transform: scale(0.2) translateY(20px); }
-        75% { opacity: 1; transform: scale(1.14) translateY(-3px); }
-        100% { opacity: 1; transform: scale(1) translateY(0); }
+        0% {
+            opacity: 0;
+            transform: translateY(22px) scale(0.2);
+        }
+        72% {
+            opacity: 1;
+            transform: translateY(-4px) scale(1.16);
+        }
+        100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
     }
 
-    .vehicle-layer {
+    .villager {
         position: absolute;
-        inset: 0;
-        z-index: 5;
-        pointer-events: none;
-    }
-
-    .vehicle {
-        position: absolute;
-        left: -15%;
-        top: 57%;
-        font-size: 24px;
-        opacity: 0;
-        animation: vehicleMove 4.2s linear infinite;
-    }
-
-    .vehicle.police {
-        top: 64%;
-        animation-duration: 3.8s;
-    }
-
-    @keyframes vehicleMove {
-        0% { left: -18%; opacity: 0; transform: rotate(-10deg); }
-        10% { opacity: 1; }
-        85% { opacity: 1; }
-        100% { left: 112%; opacity: 0; transform: rotate(-10deg); }
-    }
-
-    .citizen-layer {
-        position: absolute;
-        inset: 0;
-        z-index: 6;
-        pointer-events: none;
-    }
-
-    .citizen {
-        position: absolute;
-        font-size: 22px;
+        z-index: 26;
+        width: 34px;
+        height: 44px;
         opacity: 0;
         animation:
-            citizenEnter 0.5s ease forwards,
-            citizenWalk 2.6s ease-in-out infinite alternate;
+            villagerEnter 0.55s ease forwards,
+            villagerWalk 2.8s ease-in-out infinite alternate;
     }
 
-    @keyframes citizenEnter {
-        from { opacity: 0; transform: translateY(10px) scale(0.55); }
-        to { opacity: 1; transform: translateY(0) scale(1); }
+    .villager-face {
+        font-size: 24px;
+        filter: drop-shadow(0 4px 3px rgba(27,31,36,0.22));
     }
 
-    @keyframes citizenWalk {
-        from { margin-left: -6px; }
-        to { margin-left: 8px; }
-    }
-
-    .district-status {
-        display: grid;
-        grid-template-columns: 36px 1fr 50px;
-        gap: 10px;
+    .villager-mood {
+        position: absolute;
+        right: -8px;
+        top: -10px;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: #ffffff;
+        border: 2px solid var(--mood-color);
+        font-size: 13px;
+        display: flex;
         align-items: center;
-        padding: 12px;
-        border-radius: 18px;
-        border: 1px solid var(--line);
-        background: #f6f8fa;
+        justify-content: center;
+        box-shadow: 0 4px 8px rgba(27,31,36,0.18);
     }
 
-    .mood-face {
-        font-size: 27px;
+    @keyframes villagerEnter {
+        from {
+            opacity: 0;
+            transform: translateY(10px) scale(0.5);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
     }
 
-    .mood-label {
-        font-size: 11px;
+    @keyframes villagerWalk {
+        from {
+            margin-left: calc(var(--walk) * -0.4);
+            margin-top: 0;
+        }
+        to {
+            margin-left: var(--walk);
+            margin-top: -4px;
+        }
+    }
+
+    .zone-score {
+        position: absolute;
+        left: 10px;
+        right: 10px;
+        bottom: 9px;
+        z-index: 30;
+        display: grid;
+        grid-template-columns: 32px 1fr 48px;
+        gap: 8px;
+        align-items: center;
+        padding: 8px 9px;
+        border-radius: 15px;
+        border: 1px solid rgba(208,215,222,0.95);
+        background: rgba(255,255,255,0.92);
+        box-shadow: 0 6px 14px rgba(27,31,36,0.10);
+    }
+
+    .score-face {
+        font-size: 23px;
+    }
+
+    .score-label {
+        font-size: 10px;
         color: var(--muted);
         font-weight: 900;
-        margin-bottom: 6px;
+        margin-bottom: 5px;
     }
 
-    .mood-bar {
-        height: 10px;
+    .score-bar {
+        height: 8px;
         background: #d0d7de;
         border-radius: 999px;
         overflow: hidden;
     }
 
-    .mood-fill {
+    .score-fill {
         width: 0%;
         height: 100%;
-        border-radius: 999px;
         background: var(--score-color);
-        animation: fillMood 1.2s ease forwards;
-        animation-delay: 10.2s;
+        border-radius: 999px;
+        animation: fillScore 1.2s ease forwards;
+        animation-delay: 9.3s;
     }
 
-    @keyframes fillMood {
-        to { width: var(--score-width); }
+    @keyframes fillScore {
+        to {
+            width: var(--score-width);
+        }
     }
 
-    .mood-score {
-        font-size: 16px;
+    .score-num {
+        font-size: 15px;
         font-weight: 950;
         text-align: right;
     }
 
-    .energy-board {
+    .energy-building {
+        position: absolute;
+        z-index: 11;
+        width: 42px;
+        height: 42px;
+        opacity: 0;
+        transform: translateY(20px) scale(0.2);
+        animation: energyPop 0.56s cubic-bezier(.16,.84,.32,1.32) forwards;
+    }
+
+    .energy-building-icon {
+        font-size: 33px;
+        filter: drop-shadow(0 5px 3px rgba(27,31,36,0.20));
+    }
+
+    @keyframes energyPop {
+        0% {
+            opacity: 0;
+            transform: translateY(20px) scale(0.2);
+        }
+        72% {
+            opacity: 1;
+            transform: translateY(-4px) scale(1.12);
+        }
+        100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    .world-vehicle {
+        position: absolute;
+        left: -80px;
+        z-index: 40;
+        font-size: 28px;
+        animation: worldVehicleMove 7s linear infinite;
+        opacity: 0;
+    }
+
+    .world-vehicle.police {
+        animation-duration: 6.2s;
+    }
+
+    @keyframes worldVehicleMove {
+        0% {
+            left: -80px;
+            opacity: 0;
+            transform: rotate(-7deg);
+        }
+        8% {
+            opacity: 1;
+        }
+        88% {
+            opacity: 1;
+        }
+        100% {
+            left: 1360px;
+            opacity: 0;
+            transform: rotate(-7deg);
+        }
+    }
+
+    .speech-bubble {
+        position: absolute;
+        z-index: 60;
+        right: 42px;
+        top: 220px;
+        max-width: 290px;
         background: #ffffff;
         border: 1px solid var(--line);
-        border-radius: 30px;
-        padding: 24px;
-        box-shadow: 0 12px 30px rgba(27,31,36,0.07);
-        margin-bottom: 22px;
+        border-radius: 22px;
+        padding: 16px 18px;
+        box-shadow: 0 12px 26px rgba(27,31,36,0.14);
+        opacity: 0;
+        animation: bubbleIn 0.7s ease forwards;
+        animation-delay: 8.5s;
     }
 
-    .energy-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 14px;
-    }
-
-    .energy-card {
-        position: relative;
-        overflow: hidden;
-        min-height: 240px;
-        background: #f6f8fa;
-        border: 1px solid var(--line);
-        border-radius: 24px;
-        padding: 16px;
-        text-align: center;
-    }
-
-    .energy-card::before {
+    .speech-bubble::after {
         content: "";
         position: absolute;
-        inset: auto -20px -40px -20px;
-        height: 90px;
-        background: #b7e4a8;
-        border-radius: 50% 50% 0 0;
-        z-index: 0;
+        left: 30px;
+        bottom: -10px;
+        width: 20px;
+        height: 20px;
+        background: #ffffff;
+        border-right: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+        transform: rotate(45deg);
     }
 
-    .energy-card-title {
-        position: relative;
-        z-index: 2;
+    @keyframes bubbleIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px) scale(0.96);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    .bubble-title {
         font-size: 15px;
         font-weight: 950;
         color: var(--ink);
         margin-bottom: 5px;
     }
 
-    .energy-card-desc {
-        position: relative;
-        z-index: 2;
-        font-size: 12px;
+    .bubble-desc {
+        font-size: 13px;
         color: var(--muted);
-        margin-bottom: 12px;
+        line-height: 1.55;
     }
 
-    .energy-icon-field {
-        position: relative;
-        z-index: 2;
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        align-content: flex-start;
-        gap: 8px;
-        min-height: 128px;
-        padding: 12px;
-        background: rgba(255,255,255,0.75);
-        border: 1px dashed var(--line);
-        border-radius: 18px;
-    }
-
-    .energy-icon {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 34px;
-        height: 34px;
-        font-size: 26px;
-        opacity: 0;
-        transform: scale(0.2) translateY(15px);
-        animation: buildingPop 0.55s cubic-bezier(.16,.84,.32,1.32) forwards;
+    .energy-summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-bottom: 18px;
     }
 
     .analysis-bridge {
@@ -1680,53 +1988,6 @@ def make_game_html(
         color: var(--muted);
     }
 
-    .speech-bubble {
-        position: absolute;
-        z-index: 10;
-        right: 34px;
-        top: 106px;
-        max-width: 280px;
-        background: #ffffff;
-        border: 1px solid var(--line);
-        border-radius: 22px;
-        padding: 16px 18px;
-        box-shadow: 0 12px 26px rgba(27,31,36,0.12);
-        animation: bubbleIn 0.7s ease both;
-        animation-delay: 8.5s;
-        opacity: 0;
-    }
-
-    .speech-bubble::after {
-        content: "";
-        position: absolute;
-        left: 28px;
-        bottom: -10px;
-        width: 20px;
-        height: 20px;
-        background: #ffffff;
-        border-right: 1px solid var(--line);
-        border-bottom: 1px solid var(--line);
-        transform: rotate(45deg);
-    }
-
-    @keyframes bubbleIn {
-        from { opacity: 0; transform: translateY(10px) scale(0.96); }
-        to { opacity: 1; transform: translateY(0) scale(1); }
-    }
-
-    .bubble-title {
-        font-size: 15px;
-        font-weight: 950;
-        color: var(--ink);
-        margin-bottom: 5px;
-    }
-
-    .bubble-desc {
-        font-size: 13px;
-        color: var(--muted);
-        line-height: 1.55;
-    }
-
     .source-note {
         margin-top: 12px;
         font-size: 11px;
@@ -1734,30 +1995,34 @@ def make_game_html(
         line-height: 1.45;
     }
 
+    .map-scroll-hint {
+        margin-bottom: 10px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.5;
+    }
+
+    .world-scroll {
+        width: 100%;
+        overflow-x: auto;
+        padding-bottom: 12px;
+    }
+
     @media (max-width: 1150px) {
         .top-content,
         .hud-grid,
-        .timeline,
-        .city-grid,
-        .energy-grid,
+        .policy-summary-grid,
+        .energy-summary-grid,
         .analysis-bridge {
             grid-template-columns: 1fr;
-        }
-
-        .bridge-arrow {
-            transform: rotate(90deg);
         }
 
         .game-title {
             font-size: 32px;
         }
 
-        .speech-bubble {
-            position: relative;
-            right: auto;
-            top: auto;
-            margin-top: 16px;
-            max-width: none;
+        .bridge-arrow {
+            transform: rotate(90deg);
         }
     }
     </style>
@@ -1772,8 +2037,9 @@ def make_game_html(
                     <div class="game-eyebrow">NOVA City Builder Simulation</div>
                     <div class="game-title">내가 설계한 스마트시티를 만들자!</div>
                     <div class="game-desc">
-                        예산과 에너지 배분을 선택하면 A~E구역에 건물, 도로, 공원, 경찰, 학교,
-                        에너지 설비가 게임처럼 등장합니다. 정량 결과 분석은 뒤의 2차 대시보드에서 확인합니다.
+                        예산과 에너지 배분을 조정하면 하나의 거대한 NOVA시 지도에서
+                        A~E구역의 건물, 시민, 교통, 에너지 설비, 만족도 반응이 함께 바뀝니다.
+                        정량 분석은 2차 대시보드에서 이어서 확인합니다.
                     </div>
                 </div>
 
@@ -1808,13 +2074,13 @@ def make_game_html(
             <div class="hud-card">
                 <div class="hud-label">선택된 정책</div>
                 <div class="hud-value" style="font-size:24px;">{html_lib.escape(preset_choice)}</div>
-                <div class="hud-sub">입력한 비율에 따라 도시 장면이 달라집니다.</div>
+                <div class="hud-sub">입력한 비율에 따라 마을 장면이 다시 생성됩니다.</div>
             </div>
 
             <div class="hud-card">
                 <div class="hud-label">도시 평균 만족도</div>
                 <div class="hud-value">{avg:.1f}점</div>
-                <div class="hud-sub">정량 분석은 2차 대시보드에서 자세히 확인합니다.</div>
+                <div class="hud-sub">지도에서는 시민 표정과 구역 게이지로 표현됩니다.</div>
             </div>
 
             <div class="hud-card">
@@ -1835,42 +2101,19 @@ def make_game_html(
         <section class="quest-panel">
             <div class="quest-icon">🧭</div>
             <div>
-                <div class="quest-title">오늘의 미션: 정책 처치가 도시 구조를 어떻게 바꾸는지 관찰하기</div>
+                <div class="quest-title">오늘의 미션: 정책 처치가 마을 사람들의 삶을 어떻게 바꾸는지 관찰하기</div>
                 <div class="quest-desc">
                     복지 예산을 늘리면 병원과 돌봄시설이, 교육 예산을 늘리면 학교와 도서관이,
-                    안전 예산을 늘리면 경찰과 CCTV가, 에너지 투자를 늘리면 충전소와 발전 설비가 등장합니다.
+                    안전 예산을 늘리면 경찰과 CCTV가, 인프라 예산을 늘리면 버스와 공원이,
+                    에너지 투자를 늘리면 충전소와 발전 설비가 생깁니다.
                 </div>
             </div>
         </section>
     """
 
-    timeline = """
-        <section class="timeline">
-            <div class="timeline-step">
-                <div class="timeline-icon">🎛️</div>
-                <div class="timeline-title">1. 정책 투입</div>
-                <div class="timeline-desc">예산·에너지 비율 선택</div>
-            </div>
-            <div class="timeline-step">
-                <div class="timeline-icon">🏗️</div>
-                <div class="timeline-title">2. 건물 생성</div>
-                <div class="timeline-desc">학교·병원·경찰·공원 등장</div>
-            </div>
-            <div class="timeline-step">
-                <div class="timeline-icon">🚌</div>
-                <div class="timeline-title">3. 도시 활동</div>
-                <div class="timeline-desc">버스·경찰차·시민 이동</div>
-            </div>
-            <div class="timeline-step">
-                <div class="timeline-icon">😊</div>
-                <div class="timeline-title">4. 시민 반응</div>
-                <div class="timeline-desc">표정과 만족도 게이지 변화</div>
-            </div>
-            <div class="timeline-step">
-                <div class="timeline-icon">📊</div>
-                <div class="timeline-title">5. 상세 분석</div>
-                <div class="timeline-desc">2차 대시보드에서 결과 확인</div>
-            </div>
+    policy = f"""
+        <section class="policy-summary-grid">
+            {policy_cards}
         </section>
     """
 
@@ -1888,65 +2131,95 @@ def make_game_html(
             <div class="bridge-arrow">→</div>
 
             <div class="bridge-card">
-                <div class="bridge-title">🏙️ 도시 구조 변화</div>
+                <div class="bridge-title">🏙️ 거대한 마을 환경 변화</div>
                 <div class="bridge-desc">
-                    배분값이 높을수록 관련 시설이 더 많이 등장합니다.
-                    구역마다 시민 구성이 다르기 때문에 같은 정책도 다르게 보입니다.
+                    같은 예산이라도 구역의 성격에 따라 다르게 표현됩니다.
+                    대학가는 교육 예산에, 복지타운은 복지와 안전 예산에,
+                    산업단지는 인프라와 에너지 예산에 더 민감하게 반응합니다.
                 </div>
             </div>
         </section>
     """
 
-    city = f"""
-        <section class="city-board">
-            <div class="cloud one">☁️</div>
-            <div class="cloud two">☁️</div>
+    world = f"""
+        <div class="map-scroll-hint">
+            지도가 넓게 구성되어 있습니다. 화면이 좁으면 가로로 스크롤해서 전체 NOVA시를 확인할 수 있습니다.
+        </div>
 
-            <div class="map-container">
-                <div class="section-heading">
-                    <div>
-                        <div class="section-title">A~E구역 스마트시티 맵</div>
-                        <div class="section-subtitle">
-                            각 구역은 서로 다른 성격을 가진 도시 공간입니다.
-                            예산 처치가 적용되면 시설이 순서대로 생성되고, 시민 표정과 만족도 게이지가 바뀝니다.
-                        </div>
+        <div class="world-scroll">
+            <section class="world-board">
+                <div class="world-label">
+                    <div class="world-label-title">NOVA시 통합 마을 맵</div>
+                    <div class="world-label-desc">
+                        A~E구역이 하나의 도시 안에서 연결되어 있고,
+                        정책 비율에 따라 건물·시민·차량·에너지 설비가 변화합니다.
                     </div>
                 </div>
+
+                <div class="cloud c1">☁️</div>
+                <div class="cloud c2">☁️</div>
+                <div class="cloud c3">☁️</div>
+
+                <div class="mountain m1">⛰️</div>
+                <div class="mountain m2">⛰️</div>
+                <div class="mountain m3">⛰️</div>
+
+                <div class="river"></div>
+
+                <div class="world-road r1"></div>
+                <div class="world-road r2"></div>
+                <div class="world-road r3"></div>
+                <div class="world-road r4"></div>
+
+                <div class="tree t1">🌲</div>
+                <div class="tree t2">🌳</div>
+                <div class="tree t3">🌲</div>
+                <div class="tree t4">🌳</div>
+                <div class="tree t5">🌲</div>
+                <div class="tree t6">🌳</div>
+                <div class="tree t7">🌲</div>
+                <div class="tree t8">🌳</div>
+                <div class="tree t9">🌲</div>
+                <div class="tree t10">🌳</div>
+
+                {energy_world}
+                {vehicles}
+                {district_html}
 
                 <div class="speech-bubble">
-                    <div class="bubble-title">시민 반응</div>
+                    <div class="bubble-title">마을 사람들의 반응</div>
                     <div class="bubble-desc">
-                        “우리 구역에 필요한 시설이 생겼어요.
-                        이제 2차 대시보드에서 실제 만족도 변화를 확인해볼게요!”
+                        “새로운 시설이 생기고 생활 환경이 달라졌어요.
+                        이제 2차 대시보드에서 우리 구역의 실제 만족도 변화를 확인해볼게요!”
                     </div>
                 </div>
-
-                <div class="city-grid">
-                    {district_html}
-                </div>
-            </div>
-        </section>
+            </section>
+        </div>
     """
 
-    energy = make_energy_zone(solar, hydrogen, ess, external)
+    energy_summary = f"""
+        <section class="energy-summary-grid">
+            {energy_cards}
+        </section>
+    """
 
     final = f"""
         <section class="final-card">
-            <div class="final-title">🎮 1차 게임형 시뮬레이션 완료</div>
+            <div class="final-title">🎮 1차 고도화 게임형 시뮬레이션 완료</div>
             <div class="final-desc">
-                이 화면은 정책 처치가 도시 공간에 어떻게 구현되는지 보여주는 장면형 시뮬레이션입니다.
+                이 화면은 정책 처치가 하나의 도시 환경 안에서 어떻게 구현되는지 보여주는 장면형 시뮬레이션입니다.
                 다음 단계에서는 같은 입력값을 바탕으로 2차 대시보드에서 시민 만족도,
                 에너지 자립률, 구역별 격차, 시나리오 비교를 분석합니다.
             </div>
             {dashboard_button}
             <div class="source-note">
-                이 게임형 화면은 기존 classes.py OOP 모델의 결과값을 보조적으로 사용하되,
-                핵심 목적은 정량 분석이 아니라 “정책 처치가 도시 장면으로 바뀌는 과정”을 보여주는 것입니다.
+                이 게임형 화면은 기존 classes.py OOP 모델의 결과값을 기반으로 시민 표정과 만족도 게이지를 표현합니다.
+                완전한 모바일 게임 그래픽 수준으로 만들려면 별도의 건물·도로·캐릭터 이미지 에셋을 추가하면 더 자연스럽게 확장할 수 있습니다.
             </div>
         </section>
     """
 
-    return css + top + hud + quest + timeline + bridge + city + energy + final + "</div>"
+    return css + top + hud + quest + policy + bridge + world + energy_summary + final + "</div>"
 
 
 # ==================================================
@@ -2023,11 +2296,11 @@ st.markdown(
 
 
 # ==================================================
-# Streamlit 사이드바
+# 사이드바
 # ==================================================
 with st.sidebar:
     st.markdown("## 🎮 도시 건설 시뮬레이터")
-    st.caption("정책 처치가 A~E구역의 도시 장면을 어떻게 바꾸는지 게임처럼 보여줍니다.")
+    st.caption("정책 처치가 A~E구역의 거대한 마을 환경을 어떻게 바꾸는지 보여줍니다.")
 
     preset_choice = st.selectbox("프리셋 시나리오", list(PRESETS.keys()))
     preset = PRESETS[preset_choice]
@@ -2106,18 +2379,18 @@ with st.sidebar:
     st.caption("기존 dashboard.py를 별도 앱으로 배포했다면 그 URL을 입력하세요.")
 
     st.markdown("---")
-    st.info("비율을 바꾸면 도시 맵이 다시 생성됩니다. 건물은 배분값에 따라 많아지거나 줄어듭니다.")
+    st.info("슬라이더 값을 바꾸면 마을 전체가 다시 생성됩니다. 건물, 시민 표정, 만족도 게이지가 함께 바뀝니다.")
 
 
 # ==================================================
-# 메인 Streamlit 화면
+# 메인 화면
 # ==================================================
 st.markdown(
     """
-    <div class="main-title">🎮 NOVA시 게임형 스마트시티 시뮬레이션</div>
+    <div class="main-title">🎮 NOVA시 고도화 게임형 스마트시티 시뮬레이션</div>
     <div class="main-subtitle">
-        이 화면은 최종 분석 대시보드가 아니라, 정책 처치가 도시 구조를 바꾸는 과정을
-        마을 만들기 게임처럼 보여주는 1차 시뮬레이션입니다.
+        이 화면은 최종 분석 대시보드가 아니라, 정책 처치가 하나의 거대한 마을 환경을 바꾸는 과정을
+        게임처럼 보여주는 1차 시뮬레이션입니다.
     </div>
     """,
     unsafe_allow_html=True,
@@ -2171,14 +2444,14 @@ game_html = make_game_html(
 
 components.html(
     game_html,
-    height=1950,
+    height=2050,
     scrolling=True,
 )
 
 st.markdown("### 발표 연결 문장 예시")
 st.markdown(
     """
-    이 1차 시뮬레이션은 예산과 에너지 배분이 도시 안에서 어떤 시설로 구현되는지를 게임처럼 보여줍니다.  
+    이 1차 시뮬레이션은 예산과 에너지 배분이 도시 안에서 어떤 시설과 생활환경으로 구현되는지를 게임처럼 보여줍니다.  
     이제 같은 입력값을 2차 대시보드에서 확인하면서, 실제 시민 만족도와 에너지 자립률이 어떻게 달라졌는지 분석하겠습니다.
     """
 )
