@@ -1,6 +1,6 @@
 """
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-NOVA시 아이템형 스마트시티 시뮬레이션
+NOVA시 마을형 스마트시티 정책 시뮬레이션
 simulation_story.py
 
 실행:
@@ -46,8 +46,8 @@ except Exception as import_error:
 # 페이지 설정
 # ==================================================
 st.set_page_config(
-    page_title="NOVA시 아이템형 스마트시티 시뮬레이션",
-    page_icon="🎮",
+    page_title="NOVA시 마을형 스마트시티 시뮬레이션",
+    page_icon="🏘️",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -130,12 +130,18 @@ DISTRICT_KEYS = [
 ]
 
 
+# 하나의 마을 지도 안에서의 위치
 DISTRICT_INFO = {
     "A구역(산업단지)": {
+        "short": "A",
         "label": "A구역 산업단지",
         "icon": "🏭",
         "desc": "근로자 중심 · 이동성·에너지·인프라 민감",
-        "people": ["👷", "👩‍🏭", "🧑‍💼", "👨‍🔧", "👩‍💼", "👨‍💼"],
+        "x": 70,
+        "y": 430,
+        "w": 285,
+        "h": 250,
+        "people": ["👷", "👩‍🏭", "🧑‍💼", "👨‍🔧", "👩‍💼"],
         "weights": {
             "welfare": 0.45,
             "education": 0.35,
@@ -145,10 +151,15 @@ DISTRICT_INFO = {
         },
     },
     "B구역(대학가)": {
+        "short": "B",
         "label": "B구역 대학가",
         "icon": "🎓",
         "desc": "학생 중심 · 교육·문화·기회 민감",
-        "people": ["🧑‍🎓", "👩‍🎓", "🧑‍💻", "👨‍🎓", "👩‍💻", "📚"],
+        "x": 370,
+        "y": 145,
+        "w": 300,
+        "h": 250,
+        "people": ["🧑‍🎓", "👩‍🎓", "🧑‍💻", "👨‍🎓", "👩‍💻"],
         "weights": {
             "welfare": 0.35,
             "education": 1.60,
@@ -158,10 +169,15 @@ DISTRICT_INFO = {
         },
     },
     "C구역(복지타운)": {
+        "short": "C",
         "label": "C구역 복지타운",
         "icon": "🏥",
         "desc": "노인·취약계층 중심 · 복지·안전 민감",
-        "people": ["👵", "👴", "👩‍⚕️", "🧓", "👨‍⚕️", "🤝"],
+        "x": 820,
+        "y": 150,
+        "w": 310,
+        "h": 255,
+        "people": ["👵", "👴", "👩‍⚕️", "🧓", "👨‍⚕️"],
         "weights": {
             "welfare": 1.65,
             "education": 0.35,
@@ -171,10 +187,15 @@ DISTRICT_INFO = {
         },
     },
     "D구역(신도시)": {
+        "short": "D",
         "label": "D구역 신도시",
         "icon": "🏙️",
         "desc": "혼합형 시민 구성 · 균형 정책 반응",
-        "people": ["👨‍👩‍👧", "🧑‍💼", "👩‍💻", "🧑", "👨‍👩‍👦", "👩"],
+        "x": 415,
+        "y": 515,
+        "w": 320,
+        "h": 260,
+        "people": ["👨‍👩‍👧", "🧑‍💼", "👩‍💻", "🧑", "👨‍👩‍👦"],
         "weights": {
             "welfare": 0.90,
             "education": 0.90,
@@ -184,10 +205,15 @@ DISTRICT_INFO = {
         },
     },
     "E구역(구도심)": {
+        "short": "E",
         "label": "E구역 구도심",
         "icon": "🏘️",
         "desc": "노후 인프라 · 복지·안전·생활SOC 민감",
-        "people": ["🧑", "👵", "👴", "👨‍👩‍👧", "👩", "🧓"],
+        "x": 820,
+        "y": 535,
+        "w": 310,
+        "h": 260,
+        "people": ["🧑", "👵", "👴", "👨‍👩‍👧", "👩"],
         "weights": {
             "welfare": 1.15,
             "education": 0.55,
@@ -505,7 +531,7 @@ def run_model_or_fallback(
 
 
 # ==================================================
-# 유틸
+# 유틸 함수
 # ==================================================
 def clamp(value, low, high):
     return max(low, min(high, value))
@@ -569,6 +595,26 @@ def score_stars(score):
     return "★★★★★"
 
 
+def satisfaction_comment(district_key, score, budget_values):
+    top_key = max(budget_values, key=budget_values.get)
+    top_item = BUDGET_ITEMS[top_key]["name"]
+
+    if score < 50:
+        tone = "아직 생활이 불편해요"
+        detail = "우리 구역에 필요한 시설이 더 필요해 보여요."
+    elif score < 60:
+        tone = "조금 나아졌지만 아쉬워요"
+        detail = f"{top_item} 투입 효과는 보이지만 아직 체감은 제한적이에요."
+    elif score < 75:
+        tone = "살기 좋아지고 있어요"
+        detail = f"{top_item} 중심의 정책이 생활환경 개선으로 이어지고 있어요."
+    else:
+        tone = "정말 만족스러워요"
+        detail = "필요한 시설과 서비스가 균형 있게 들어와서 체감 만족도가 높아요."
+
+    return tone, detail
+
+
 def get_budget_values(welfare, education, energy_infra, general_infra, safety):
     return {
         "welfare": welfare,
@@ -590,8 +636,8 @@ def get_energy_values(solar, hydrogen, ess, external):
 
 def get_top_budget_items_for_district(district_key, budget_values):
     weights = DISTRICT_INFO[district_key]["weights"]
-
     weighted = []
+
     for key, value in budget_values.items():
         weighted.append((key, value, value * weights[key]))
 
@@ -605,12 +651,13 @@ def get_facilities_for_district(district_key, budget_values):
     weighted_items = []
     for key, value in budget_values.items():
         item = BUDGET_ITEMS[key]
-        count = clamp(round((value * weights[key]) / 20), 1, 3)
+        count = clamp(round((value * weights[key]) / 22), 1, 3)
+
         for _ in range(count):
             weighted_items.append((key, item["object"], item["name"], value * weights[key]))
 
     weighted_items.sort(key=lambda x: x[3], reverse=True)
-    return weighted_items[:8]
+    return weighted_items[:7]
 
 
 def resident_emojis_for_district(district_key, score):
@@ -625,10 +672,15 @@ def resident_emojis_for_district(district_key, score):
     else:
         mood = "😄"
 
+    layout = [
+        (22, 178), (58, 176), (94, 180), (130, 177), (166, 181),
+        (202, 178), (238, 180), (78, 207), (120, 208), (162, 207),
+    ]
+
     residents = []
-    for i in range(10):
+    for i, (x, y) in enumerate(layout):
         person = info["people"][i % len(info["people"])]
-        residents.append((person, mood))
+        residents.append((person, mood, x, y))
 
     return residents
 
@@ -696,14 +748,17 @@ def make_dashboard_link(
 def make_item_slot_html(value, color):
     filled = item_slots(value)
     html = ""
+
     for i in range(5):
         cls = "slot active" if i < filled else "slot"
         html += f'<span class="{cls}" style="--slot-color:{color};"></span>'
+
     return html
 
 
 def make_budget_inventory_html(budget_values):
     html = ""
+
     for key, value in budget_values.items():
         item = BUDGET_ITEMS[key]
         level = item_level(value)
@@ -726,11 +781,13 @@ def make_budget_inventory_html(budget_values):
             </div>
         </div>
         """
+
     return html
 
 
 def make_energy_inventory_html(energy_values):
     html = ""
+
     for key, value in energy_values.items():
         item = ENERGY_ITEMS[key]
         level = item_level(value)
@@ -753,6 +810,7 @@ def make_energy_inventory_html(energy_values):
             </div>
         </div>
         """
+
     return html
 
 
@@ -760,6 +818,7 @@ def make_applied_item_html(district_key, budget_values):
     top_items = get_top_budget_items_for_district(district_key, budget_values)
 
     html = ""
+
     for key, value, weighted_value in top_items:
         item = BUDGET_ITEMS[key]
         power = clamp(round(weighted_value), 0, 100)
@@ -772,21 +831,30 @@ def make_applied_item_html(district_key, budget_values):
             </div>
         </div>
         """
+
     return html
 
 
 def make_facility_html(district_key, budget_values):
     facilities = get_facilities_for_district(district_key, budget_values)
 
+    positions = [
+        (28, 94), (86, 94), (144, 94), (202, 94),
+        (58, 140), (116, 140), (174, 140),
+    ]
+
     html = ""
-    for key, icon, name, _ in facilities:
+
+    for idx, (key, icon, name, _) in enumerate(facilities):
         item = BUDGET_ITEMS[key]
+        x, y = positions[idx]
         html += f"""
-        <div class="facility-item" style="--item-color:{item['color']};">
+        <div class="facility-item" style="left:{x}px; top:{y}px; --item-color:{item['color']};">
             <div class="facility-emoji">{icon}</div>
             <div class="facility-caption">{name}</div>
         </div>
         """
+
     return html
 
 
@@ -794,29 +862,33 @@ def make_residents_html(district_key, score):
     residents = resident_emojis_for_district(district_key, score)
 
     html = ""
-    for person, mood in residents:
+
+    for person, mood, x, y in residents:
         html += f"""
-        <div class="resident-item">
+        <div class="resident-item" style="left:{x}px; top:{y}px;">
             <div class="resident-person">{person}</div>
             <div class="resident-mood">{mood}</div>
         </div>
         """
+
     return html
 
 
-def make_district_card_html(district_key, score, budget_values):
+def make_district_zone_html(district_key, score, budget_values):
     info = DISTRICT_INFO[district_key]
     color = score_color(score)
     face = score_face(score)
     label = score_label(score)
     stars = score_stars(score)
+    tone, detail = satisfaction_comment(district_key, score, budget_values)
 
     applied_items_html = make_applied_item_html(district_key, budget_values)
     facilities_html = make_facility_html(district_key, budget_values)
     residents_html = make_residents_html(district_key, score)
 
     return f"""
-    <div class="district-card">
+    <div class="district-zone"
+         style="left:{info['x']}px; top:{info['y']}px; width:{info['w']}px; height:{info['h']}px;">
         <div class="district-header">
             <div class="district-icon">{info['icon']}</div>
             <div>
@@ -826,51 +898,43 @@ def make_district_card_html(district_key, score, budget_values):
         </div>
 
         <div class="applied-panel">
-            <div class="panel-title">적용된 정책 아이템</div>
+            <div class="applied-title">적용된 정책 아이템</div>
             <div class="applied-list">
                 {applied_items_html}
             </div>
         </div>
 
-        <div class="district-content-grid">
-            <div class="content-box">
-                <div class="content-title">도시 시설 오브젝트</div>
-                <div class="facility-grid">
-                    {facilities_html}
-                </div>
-            </div>
+        <div class="mini-road road-a"></div>
+        <div class="mini-road road-b"></div>
 
-            <div class="content-box">
-                <div class="content-title">마을 사람들</div>
-                <div class="resident-grid">
-                    {residents_html}
-                </div>
-            </div>
-        </div>
+        {facilities_html}
+        {residents_html}
 
-        <div class="district-score-panel">
-            <div class="score-face-big">{face}</div>
+        <div class="district-score">
+            <div class="score-face">{face}</div>
             <div class="score-center">
-                <div class="score-top-row">
+                <div class="score-row">
                     <span class="score-state">{label}</span>
                     <span class="score-stars">{stars}</span>
                 </div>
-                <div class="score-bar-bg">
-                    <div class="score-bar-fill"
-                         style="width:{score:.1f}%; background:{color};"></div>
+                <div class="score-bar">
+                    <div class="score-fill" style="width:{score:.1f}%; background:{color};"></div>
                 </div>
-                <div class="score-sub">시민 만족도</div>
             </div>
-            <div class="score-right" style="color:{color};">
-                {score:.1f}
-            </div>
+            <div class="score-num" style="color:{color};">{score:.1f}</div>
+        </div>
+
+        <div class="comment-bubble">
+            <div class="comment-title">{tone}</div>
+            <div class="comment-text">{detail}</div>
         </div>
     </div>
     """
 
 
-def make_energy_object_field_html(energy_values):
+def make_energy_field_html(energy_values):
     html = ""
+
     for key, value in energy_values.items():
         item = ENERGY_ITEMS[key]
         count = clamp(round(value / 20), 0, 5)
@@ -884,9 +948,7 @@ def make_energy_object_field_html(energy_values):
             """
 
         if count == 0:
-            object_html = """
-            <div class="energy-empty">투입 없음</div>
-            """
+            object_html = '<div class="energy-empty">투입 없음</div>'
 
         html += f"""
         <div class="energy-field-card" style="--item-color:{item['color']};">
@@ -903,6 +965,7 @@ def make_energy_object_field_html(energy_values):
             <div class="energy-field-desc">{item['desc']}</div>
         </div>
         """
+
     return html
 
 
@@ -922,9 +985,9 @@ def make_main_scene_html(
     savings = result["savings"]
     source = result["source"]
 
-    district_cards = ""
+    district_zones = ""
     for key in DISTRICT_KEYS:
-        district_cards += make_district_card_html(
+        district_zones += make_district_zone_html(
             key,
             result["scores"][key],
             budget_values
@@ -932,7 +995,7 @@ def make_main_scene_html(
 
     budget_inventory = make_budget_inventory_html(budget_values)
     energy_inventory = make_energy_inventory_html(energy_values)
-    energy_objects = make_energy_object_field_html(energy_values)
+    energy_field = make_energy_field_html(energy_values)
 
     dashboard_button = make_dashboard_link(
         dashboard_url,
@@ -975,8 +1038,6 @@ def make_main_scene_html(
     }}
 
     .hero-content {{
-        position: relative;
-        z-index: 2;
         display: grid;
         grid-template-columns: 1.5fr 1fr;
         gap: 18px;
@@ -1191,116 +1252,212 @@ def make_main_scene_html(
         background: var(--slot-color);
     }}
 
-    .simulation-board {{
-        background: #ffffff;
-        border: 1px solid #d0d7de;
-        border-radius: 28px;
-        padding: 22px;
-        box-shadow: 0 14px 28px rgba(27,31,36,0.07);
+    .village-scroll {{
+        width: 100%;
+        overflow-x: auto;
+        padding-bottom: 10px;
         margin-bottom: 24px;
     }}
 
-    .district-grid {{
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 18px;
+    .village-board {{
+        position: relative;
+        width: 1220px;
+        height: 880px;
+        border-radius: 32px;
+        overflow: hidden;
+        border: 1px solid #d0d7de;
+        background:
+            linear-gradient(180deg, #eaf5ff 0%, #eef8ff 22%, #edf7e6 55%, #dfeccd 100%);
+        box-shadow: 0 18px 34px rgba(27,31,36,0.08);
     }}
 
-    .district-card {{
-        background:
-            linear-gradient(180deg, rgba(255,255,255,0.96), rgba(250,252,255,0.96));
+    .village-title-card {{
+        position: absolute;
+        left: 28px;
+        top: 28px;
+        width: 340px;
+        background: rgba(255,255,255,0.94);
         border: 1px solid #d0d7de;
+        border-radius: 22px;
+        padding: 16px 18px;
+        box-shadow: 0 10px 20px rgba(27,31,36,0.08);
+        z-index: 20;
+    }}
+
+    .village-title {{
+        font-size: 23px;
+        font-weight: 900;
+        color: #1f2328;
+        margin-bottom: 4px;
+    }}
+
+    .village-desc {{
+        font-size: 13px;
+        line-height: 1.55;
+        color: #57606a;
+    }}
+
+    .main-road {{
+        position: absolute;
+        background: #7b8491;
+        box-shadow: inset 0 0 0 2px rgba(255,255,255,0.15);
+        z-index: 1;
+    }}
+
+    .main-road::after {{
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 50%;
+        width: 1600px;
+        border-top: 3px dashed rgba(255,255,255,0.72);
+    }}
+
+    .road-1 {{
+        left: -80px;
+        top: 410px;
+        width: 1400px;
+        height: 44px;
+        transform: rotate(-7deg);
+    }}
+
+    .road-2 {{
+        left: 390px;
+        top: -80px;
+        width: 50px;
+        height: 1050px;
+        transform: rotate(10deg);
+    }}
+
+    .road-3 {{
+        left: 790px;
+        top: -80px;
+        width: 50px;
+        height: 1050px;
+        transform: rotate(-12deg);
+    }}
+
+    .water-line {{
+        position: absolute;
+        left: -60px;
+        bottom: 22px;
+        width: 1400px;
+        height: 74px;
+        transform: rotate(-5deg);
+        background:
+            repeating-linear-gradient(
+                120deg,
+                rgba(255,255,255,0.32) 0 12px,
+                rgba(255,255,255,0.08) 12px 24px
+            ),
+            #8ec5ff;
+        border-radius: 999px;
+        z-index: 1;
+    }}
+
+    .district-zone {{
+        position: absolute;
+        background:
+            linear-gradient(180deg, rgba(255,255,255,0.32), rgba(255,255,255,0.14)),
+            repeating-linear-gradient(45deg, #dcedc5 0 18px, #d7e8bf 18px 36px);
+        border: 2px solid rgba(255,255,255,0.95);
         border-radius: 26px;
-        padding: 18px;
-        box-shadow: 0 10px 24px rgba(27,31,36,0.06);
-        min-height: 520px;
+        box-shadow: 0 16px 30px rgba(27,31,36,0.12);
         overflow: hidden;
+        z-index: 5;
     }}
 
     .district-header {{
-        display: grid;
-        grid-template-columns: 58px 1fr;
-        gap: 12px;
-        align-items: center;
-        background: #f6f8fa;
+        position: absolute;
+        left: 12px;
+        right: 12px;
+        top: 12px;
+        height: 62px;
+        background: rgba(255,255,255,0.96);
         border: 1px solid #d0d7de;
-        border-radius: 20px;
-        padding: 12px 14px;
-        margin-bottom: 14px;
+        border-radius: 18px;
+        display: grid;
+        grid-template-columns: 46px 1fr;
+        gap: 9px;
+        align-items: center;
+        padding: 9px 11px;
+        z-index: 15;
+        box-shadow: 0 7px 14px rgba(27,31,36,0.06);
     }}
 
     .district-icon {{
-        width: 50px;
-        height: 50px;
-        border-radius: 17px;
-        background: #ffffff;
+        width: 42px;
+        height: 42px;
+        border-radius: 15px;
+        background: #f6f8fa;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 30px;
-        border: 1px solid #e5e7eb;
+        font-size: 25px;
     }}
 
     .district-title {{
-        font-size: 18px;
+        font-size: 15px;
         font-weight: 900;
         color: #1f2328;
-        margin-bottom: 3px;
+        margin-bottom: 2px;
     }}
 
     .district-desc {{
-        font-size: 13px;
+        font-size: 10.5px;
         color: #57606a;
-        line-height: 1.4;
+        line-height: 1.28;
     }}
 
     .applied-panel {{
-        background: #ffffff;
+        position: absolute;
+        left: 12px;
+        right: 12px;
+        top: 82px;
+        height: 46px;
+        background: rgba(255,255,255,0.90);
         border: 1px solid #d0d7de;
-        border-radius: 18px;
-        padding: 12px;
-        margin-bottom: 14px;
+        border-radius: 16px;
+        z-index: 16;
+        padding: 6px 8px;
+        box-shadow: 0 6px 12px rgba(27,31,36,0.05);
     }}
 
-    .panel-title {{
-        font-size: 12px;
+    .applied-title {{
+        font-size: 9px;
         font-weight: 900;
         color: #57606a;
-        margin-bottom: 8px;
+        margin-bottom: 3px;
     }}
 
     .applied-list {{
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 8px;
+        gap: 5px;
     }}
 
     .applied-item {{
         display: grid;
-        grid-template-columns: 34px 1fr;
+        grid-template-columns: 23px 1fr;
+        gap: 4px;
         align-items: center;
-        gap: 8px;
-        background: #f6f8fa;
-        border: 1px solid #e5e7eb;
-        border-radius: 14px;
-        padding: 8px;
         min-width: 0;
     }}
 
     .applied-icon {{
-        width: 32px;
-        height: 32px;
-        border-radius: 11px;
+        width: 22px;
+        height: 22px;
+        border-radius: 8px;
         background: var(--item-color);
         color: white;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 18px;
+        font-size: 13px;
     }}
 
     .applied-name {{
-        font-size: 12px;
+        font-size: 9px;
         font-weight: 900;
         color: #1f2328;
         white-space: nowrap;
@@ -1309,170 +1466,193 @@ def make_main_scene_html(
     }}
 
     .applied-sub {{
-        font-size: 10px;
+        font-size: 8px;
         color: #6b7280;
     }}
 
-    .district-content-grid {{
-        display: grid;
-        grid-template-columns: 1.15fr 0.85fr;
-        gap: 14px;
-        margin-bottom: 14px;
+    .mini-road {{
+        position: absolute;
+        background: rgba(123,132,145,0.80);
+        z-index: 6;
+        box-shadow: inset 0 0 0 2px rgba(255,255,255,0.14);
     }}
 
-    .content-box {{
-        background: #f8fafc;
-        border: 1px solid #e5e7eb;
-        border-radius: 20px;
-        padding: 12px;
-        min-height: 214px;
+    .mini-road::after {{
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 50%;
+        width: 500px;
+        border-top: 2px dashed rgba(255,255,255,0.72);
     }}
 
-    .content-title {{
-        font-size: 12px;
-        color: #57606a;
-        font-weight: 900;
-        margin-bottom: 10px;
+    .road-a {{
+        left: -30px;
+        top: 155px;
+        width: 370px;
+        height: 24px;
+        transform: rotate(-8deg);
     }}
 
-    .facility-grid {{
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 10px;
+    .road-b {{
+        left: 138px;
+        top: 130px;
+        width: 22px;
+        height: 132px;
+        transform: rotate(10deg);
     }}
 
     .facility-item {{
-        background: #ffffff;
-        border: 1px solid #e5e7eb;
-        border-radius: 15px;
-        padding: 8px 6px;
+        position: absolute;
+        width: 50px;
         text-align: center;
-        min-height: 76px;
+        z-index: 10;
     }}
 
     .facility-emoji {{
         width: 38px;
         height: 38px;
-        margin: 0 auto 5px;
+        margin: 0 auto 2px;
         border-radius: 13px;
         background: var(--item-color);
         color: white;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 23px;
-        box-shadow: 0 6px 12px rgba(27,31,36,0.10);
+        font-size: 22px;
+        box-shadow: 0 6px 12px rgba(27,31,36,0.12);
     }}
 
     .facility-caption {{
-        font-size: 10px;
+        font-size: 9px;
         font-weight: 800;
         color: #374151;
-    }}
-
-    .resident-grid {{
-        display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-        gap: 10px;
+        background: rgba(255,255,255,0.86);
+        border-radius: 999px;
+        padding: 2px 5px;
+        display: inline-block;
     }}
 
     .resident-item {{
-        position: relative;
-        background: #ffffff;
-        border: 1px solid #e5e7eb;
-        border-radius: 16px;
-        height: 62px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        position: absolute;
+        z-index: 12;
+        width: 32px;
+        height: 36px;
     }}
 
     .resident-person {{
-        font-size: 30px;
+        font-size: 25px;
+        filter: drop-shadow(0 3px 3px rgba(27,31,36,0.14));
     }}
 
     .resident-mood {{
         position: absolute;
-        right: -4px;
-        top: -5px;
-        width: 22px;
-        height: 22px;
+        right: -5px;
+        top: -7px;
+        width: 18px;
+        height: 18px;
         border-radius: 50%;
         background: #ffffff;
         border: 2px solid #d0d7de;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 12px;
+        font-size: 10px;
         box-shadow: 0 4px 8px rgba(27,31,36,0.12);
     }}
 
-    .district-score-panel {{
-        background: #ffffff;
+    .district-score {{
+        position: absolute;
+        left: 12px;
+        right: 12px;
+        bottom: 12px;
+        height: 58px;
+        background: rgba(255,255,255,0.96);
         border: 1px solid #d0d7de;
-        border-radius: 20px;
+        border-radius: 18px;
         display: grid;
-        grid-template-columns: 58px 1fr 76px;
-        gap: 12px;
+        grid-template-columns: 42px 1fr 54px;
+        gap: 8px;
         align-items: center;
-        padding: 14px;
-        box-shadow: 0 8px 16px rgba(27,31,36,0.05);
+        padding: 9px 11px;
+        z-index: 17;
+        box-shadow: 0 8px 16px rgba(27,31,36,0.06);
     }}
 
-    .score-face-big {{
-        width: 50px;
-        height: 50px;
-        border-radius: 17px;
+    .score-face {{
+        width: 36px;
+        height: 36px;
+        border-radius: 13px;
         background: #fff7ed;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 29px;
+        font-size: 22px;
     }}
 
-    .score-top-row {{
+    .score-row {{
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 7px;
-        gap: 10px;
+        gap: 8px;
+        margin-bottom: 5px;
     }}
 
     .score-state {{
-        font-size: 15px;
+        font-size: 12px;
         font-weight: 900;
         color: #1f2328;
     }}
 
     .score-stars {{
-        font-size: 14px;
+        font-size: 11px;
         color: #f59e0b;
         font-weight: 800;
     }}
 
-    .score-bar-bg {{
-        height: 11px;
-        border-radius: 999px;
+    .score-bar {{
+        height: 8px;
         background: #e5e7eb;
+        border-radius: 999px;
         overflow: hidden;
     }}
 
-    .score-bar-fill {{
+    .score-fill {{
         height: 100%;
         border-radius: 999px;
     }}
 
-    .score-sub {{
-        font-size: 12px;
-        color: #6b7280;
-        margin-top: 5px;
-    }}
-
-    .score-right {{
-        font-size: 36px;
+    .score-num {{
+        font-size: 24px;
         font-weight: 900;
         text-align: right;
         line-height: 1;
+    }}
+
+    .comment-bubble {{
+        position: absolute;
+        left: 14px;
+        right: 14px;
+        bottom: 78px;
+        background: rgba(255,255,255,0.94);
+        border: 1px solid #d0d7de;
+        border-radius: 16px;
+        padding: 8px 10px;
+        z-index: 18;
+        box-shadow: 0 8px 16px rgba(27,31,36,0.07);
+    }}
+
+    .comment-title {{
+        font-size: 11px;
+        font-weight: 900;
+        color: #1f2328;
+        margin-bottom: 3px;
+    }}
+
+    .comment-text {{
+        font-size: 9.5px;
+        color: #57606a;
+        line-height: 1.35;
     }}
 
     .energy-section {{
@@ -1659,8 +1839,6 @@ def make_main_scene_html(
         .hud-grid,
         .inventory-grid,
         .inventory-grid.energy,
-        .district-grid,
-        .district-content-grid,
         .energy-object-grid-section {{
             grid-template-columns: 1fr;
         }}
@@ -1671,11 +1849,11 @@ def make_main_scene_html(
         <div class="hero">
             <div class="hero-content">
                 <div>
-                    <div class="hero-eyebrow">NOVA Smart City Item Simulation</div>
-                    <div class="hero-title">겹침 없이 정돈된 아이템형 스마트시티 시뮬레이션</div>
+                    <div class="hero-eyebrow">NOVA Village Simulation</div>
+                    <div class="hero-title">A~E구역이 하나로 연결된 마을형 스마트시티 시뮬레이션</div>
                     <div class="hero-desc">
-                        배경 장식과 겹치는 오브젝트를 제거하고, 정책 아이템·시설·주민·만족도를
-                        구역별 카드 안에서 명확하게 확인할 수 있도록 재구성했습니다.
+                        카드형 분석 화면이 아니라, 하나의 마을 지도 안에 A구역부터 E구역까지 함께 배치했습니다.
+                        불필요한 구름과 숲은 제거하고, 정책 아이템·시설·주민·댓글·만족도가 한 화면에서 보이도록 구성했습니다.
                     </div>
                 </div>
 
@@ -1704,13 +1882,13 @@ def make_main_scene_html(
             <div class="hud-card">
                 <div class="hud-label">선택 정책</div>
                 <div class="hud-value" style="font-size:24px;">{html_lib.escape(preset_choice)}</div>
-                <div class="hud-sub">정책 아이템과 구역별 적용 결과가 함께 표시됩니다.</div>
+                <div class="hud-sub">마을 전체에 정책 처치가 적용됩니다.</div>
             </div>
 
             <div class="hud-card">
                 <div class="hud-label">시민 만족도 평균</div>
                 <div class="hud-value">{avg:.1f}점</div>
-                <div class="hud-sub">구역별 주민 구성과 정책 아이템 효과가 반영됩니다.</div>
+                <div class="hud-sub">주민 표정과 댓글로 체감 만족도를 표현합니다.</div>
             </div>
 
             <div class="hud-card">
@@ -1728,7 +1906,7 @@ def make_main_scene_html(
 
         <div class="section-title">🎒 정책 아이템 인벤토리</div>
         <div class="section-sub">
-            내가 처치한 예산 배분을 게임 아이템처럼 표현했습니다. 비율이 높을수록 아이템 레벨과 슬롯이 커집니다.
+            내가 처치한 예산 배분을 게임 아이템처럼 표현했습니다.
         </div>
         <div class="inventory-grid">
             {budget_inventory}
@@ -1736,39 +1914,52 @@ def make_main_scene_html(
 
         <div class="section-title">⚡ 에너지 아이템 인벤토리</div>
         <div class="section-sub">
-            에너지 배분도 아이템 오브젝트로 표현했습니다. 태양광, 수소, ESS, 외부전력망의 구성이 자립률을 결정합니다.
+            에너지 배분도 아이템으로 표현했습니다.
         </div>
         <div class="inventory-grid energy">
             {energy_inventory}
         </div>
 
-        <div class="simulation-board">
-            <div class="section-title">🏘️ 구역별 정책 적용 시뮬레이션</div>
-            <div class="section-sub">
-                구역 카드끼리 겹치지 않도록 그리드 구조로 재배치했습니다.
-                각 구역 안에서 적용된 정책 아이템, 시설 오브젝트, 주민 반응, 만족도를 순서대로 볼 수 있습니다.
-            </div>
-            <div class="district-grid">
-                {district_cards}
+        <div class="section-title">🏘️ NOVA시 통합 마을 지도</div>
+        <div class="section-sub">
+            A~E구역이 하나의 마을 안에 함께 배치됩니다.
+            각 구역에는 정책 아이템, 시설 오브젝트, 주민 이모지, 만족도 댓글이 표시됩니다.
+        </div>
+
+        <div class="village-scroll">
+            <div class="village-board">
+                <div class="village-title-card">
+                    <div class="village-title">NOVA 통합 마을</div>
+                    <div class="village-desc">
+                        A~E구역이 하나의 도시 안에서 연결되어 있으며,
+                        정책 처치에 따라 구역별 시설과 주민 반응이 달라집니다.
+                    </div>
+                </div>
+
+                <div class="main-road road-1"></div>
+                <div class="main-road road-2"></div>
+                <div class="main-road road-3"></div>
+                <div class="water-line"></div>
+
+                {district_zones}
             </div>
         </div>
 
         <div class="energy-section">
             <div class="section-title">⚡ 에너지 아이템 필드</div>
             <div class="section-sub">
-                에너지 오브젝트가 지도 위에 겹치지 않도록 별도 필드로 분리했습니다.
-                투입 비율에 따라 각 에너지 오브젝트 개수가 달라집니다.
+                에너지 오브젝트는 마을 지도와 겹치지 않도록 별도 필드로 분리했습니다.
             </div>
             <div class="energy-object-grid-section">
-                {energy_objects}
+                {energy_field}
             </div>
         </div>
 
         <div class="reaction-box">
-            <div class="reaction-title">🗣️ 마을 사람들의 반응</div>
+            <div class="reaction-title">🗣️ 마을 사람들의 전체 반응</div>
             <div class="reaction-desc">
-                “이제 어떤 정책 아이템이 우리 구역에 들어왔는지 더 잘 보여요.
-                시설과 주민, 만족도가 분리되어 보여서 정책 처치의 결과를 한눈에 이해할 수 있어요.”
+                “마을 안에 어떤 정책 아이템이 들어왔는지, 그 결과로 어떤 시설이 생겼는지,
+                그리고 주민들이 얼마나 만족하는지 댓글과 이모지로 확인할 수 있어요.”
             </div>
         </div>
 
@@ -1781,7 +1972,7 @@ def make_main_scene_html(
             </div>
             {dashboard_button}
             <div class="mini-note">
-                이 버전은 겹침을 줄이기 위해 기존 absolute map 구조를 제거하고, 카드형 그리드 구조로 재설계했습니다.
+                이 버전은 마을형 배치를 유지하되, 불필요한 구름·숲·산 장식은 제거하고 주민 댓글과 만족도 표현을 강화했습니다.
             </div>
         </div>
     </div>
@@ -1794,8 +1985,8 @@ def make_main_scene_html(
 # 사이드바
 # ==================================================
 with st.sidebar:
-    st.markdown("## 🎮 NOVA시 아이템 시뮬레이터")
-    st.caption("예산과 에너지를 게임 아이템처럼 투입해 마을 변화를 확인합니다.")
+    st.markdown("## 🏘️ NOVA시 마을 시뮬레이터")
+    st.caption("A~E구역이 하나의 마을로 구성되고, 정책 처치에 따라 주민 반응이 달라집니다.")
 
     preset_choice = st.selectbox("프리셋 시나리오", list(PRESETS.keys()))
     preset = PRESETS[preset_choice]
@@ -1865,9 +2056,9 @@ with st.sidebar:
 # 메인
 # ==================================================
 st.markdown("""
-<div class="app-title">🎮 NOVA시 아이템형 스마트시티 시뮬레이션</div>
+<div class="app-title">🏘️ NOVA시 마을형 스마트시티 시뮬레이션</div>
 <div class="app-subtitle">
-겹치는 지도형 화면을 정리하고, 예산·에너지 처치를 아이템 인벤토리와 구역별 카드로 명확하게 시각화했습니다.
+A구역부터 E구역까지 하나의 마을 안에 배치하고, 정책 처치에 따른 시설 변화와 주민 만족도를 댓글·이모지로 표현합니다.
 </div>
 """, unsafe_allow_html=True)
 
@@ -1880,10 +2071,11 @@ if not HAS_CLASSES:
 st.markdown("""
 <div class="box-warn">
 <b>이번 수정의 핵심</b><br>
-- 구역 카드, 시설, 주민, 만족도가 서로 겹치지 않도록 그리드 구조로 변경<br>
-- 배경의 구름, 산, 숲, 큰 도로 등 시선 분산 요소 제거<br>
-- 에너지 아이템 필드를 지도에서 분리해 별도 섹션으로 정리<br>
-- 각 구역에서 적용된 정책 아이템과 시민 반응이 더 명확하게 보이도록 개선
+- 카드형 분석 화면이 아니라 이전의 마을형 지도를 유지<br>
+- 불필요한 구름, 숲, 산 장식 제거<br>
+- A~E구역이 하나의 마을 안에 함께 배치되도록 구성<br>
+- 각 구역에 정책 아이템, 시설, 주민, 만족도 댓글 표시<br>
+- 사람들의 만족도를 표정 이모지와 댓글로 표현
 </div>
 """, unsafe_allow_html=True)
 
@@ -1911,10 +2103,11 @@ scene_html = make_main_scene_html(
     dashboard_url
 )
 
-components.html(scene_html, height=2850, scrolling=True)
+components.html(scene_html, height=2800, scrolling=True)
 
 st.markdown("### 발표용 연결 멘트 예시")
 st.markdown("""
-이 1차 시뮬레이션은 예산과 에너지 배분을 아이템처럼 시각화해서, 내가 어떤 처치를 했고 그 처치가 어느 구역에 어떻게 적용되었는지 보여줍니다.  
-이제 같은 입력값을 2차 대시보드에서 확인하면서, 실제 시민 만족도와 에너지 자립률을 정량적으로 분석하겠습니다.
+이 1차 시뮬레이션은 A구역부터 E구역까지 하나의 마을로 구성된 스마트시티를 보여줍니다.  
+예산과 에너지 배분이라는 정책 처치가 어떤 시설을 만들고, 그 결과 주민들이 어떤 표정과 댓글로 반응하는지를 확인한 뒤,  
+2차 대시보드에서 같은 입력값을 정량적으로 분석하겠습니다.
 """)
