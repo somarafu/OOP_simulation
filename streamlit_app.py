@@ -132,8 +132,9 @@ DISTRICT_KEYS = [
 
 # ==================================================
 # 구역 정보
-# 전체 화면이 너무 커지지 않도록 이전보다 축소
-# 단, 내부 박스가 잘리지 않도록 높이는 충분히 확보
+# 겹침 방지를 위해 좌표를 2단 구조로 재배치
+# 1행: B, C
+# 2행: A, D, E
 # ==================================================
 DISTRICT_INFO = {
     "A구역(산업단지)": {
@@ -142,7 +143,7 @@ DISTRICT_INFO = {
         "icon": "🏭",
         "desc": "근로자 중심 · 이동성·에너지·인프라 민감",
         "x": 70,
-        "y": 565,
+        "y": 680,
         "w": 390,
         "h": 490,
         "people": ["👷", "👩‍🏭", "🧑‍💼", "👨‍🔧", "👩‍💼"],
@@ -159,8 +160,8 @@ DISTRICT_INFO = {
         "label": "B구역 대학가",
         "icon": "🎓",
         "desc": "학생 중심 · 교육·문화·기회 민감",
-        "x": 150,
-        "y": 115,
+        "x": 260,
+        "y": 105,
         "w": 390,
         "h": 490,
         "people": ["🧑‍🎓", "👩‍🎓", "🧑‍💻", "👨‍🎓", "👩‍💻"],
@@ -177,8 +178,8 @@ DISTRICT_INFO = {
         "label": "C구역 복지타운",
         "icon": "🏥",
         "desc": "노인·취약계층 중심 · 복지·안전 민감",
-        "x": 805,
-        "y": 115,
+        "x": 850,
+        "y": 105,
         "w": 390,
         "h": 490,
         "people": ["👵", "👴", "👩‍⚕️", "🧓", "👨‍⚕️"],
@@ -195,8 +196,8 @@ DISTRICT_INFO = {
         "label": "D구역 신도시",
         "icon": "🏙️",
         "desc": "혼합형 시민 구성 · 균형 정책 반응",
-        "x": 470,
-        "y": 660,
+        "x": 550,
+        "y": 680,
         "w": 390,
         "h": 490,
         "people": ["👨‍👩‍👧", "🧑‍💼", "👩‍💻", "🧑", "👨‍👩‍👦"],
@@ -213,8 +214,8 @@ DISTRICT_INFO = {
         "label": "E구역 구도심",
         "icon": "🏘️",
         "desc": "노후 인프라 · 복지·안전·생활SOC 민감",
-        "x": 870,
-        "y": 635,
+        "x": 1030,
+        "y": 680,
         "w": 390,
         "h": 490,
         "people": ["🧑", "👵", "👴", "👨‍👩‍👧", "👩"],
@@ -818,7 +819,6 @@ def make_energy_inventory_html(energy_values):
 
 def make_applied_item_html(district_key, budget_values):
     top_items = get_top_budget_items_for_district(district_key, budget_values)
-
     html = ""
 
     for key, value, weighted_value in top_items:
@@ -839,7 +839,6 @@ def make_applied_item_html(district_key, budget_values):
 
 def make_facility_html(district_key, budget_values):
     facilities = get_facilities_for_district(district_key, budget_values)
-
     html = ""
 
     for key, icon, name, _ in facilities:
@@ -856,7 +855,6 @@ def make_facility_html(district_key, budget_values):
 
 def make_residents_html(district_key, score):
     residents = get_residents_for_district(district_key, score)
-
     html = ""
 
     for person, mood in residents:
@@ -1266,8 +1264,8 @@ def make_main_scene_html(
 
     .village-board {{
         position: relative;
-        width: 1320px;
-        height: 1180px;
+        width: 1500px;
+        height: 1240px;
         border-radius: 30px;
         overflow: hidden;
         border: 1px solid #d0d7de;
@@ -1307,6 +1305,7 @@ def make_main_scene_html(
         background: #7b8491;
         box-shadow: inset 0 0 0 2px rgba(255,255,255,0.15);
         z-index: 1;
+        pointer-events: none;
     }}
 
     .main-road::after {{
@@ -1314,41 +1313,41 @@ def make_main_scene_html(
         position: absolute;
         left: 0;
         top: 50%;
-        width: 1600px;
+        width: 1800px;
         border-top: 3px dashed rgba(255,255,255,0.72);
     }}
 
     .road-1 {{
         left: -100px;
-        top: 570px;
-        width: 1600px;
+        top: 620px;
+        width: 1800px;
         height: 42px;
-        transform: rotate(-7deg);
+        transform: rotate(-6deg);
     }}
 
     .road-2 {{
-        left: 440px;
-        top: -80px;
-        width: 50px;
-        height: 1400px;
-        transform: rotate(10deg);
+        left: 500px;
+        top: -90px;
+        width: 48px;
+        height: 1450px;
+        transform: rotate(9deg);
     }}
 
     .road-3 {{
-        left: 880px;
-        top: -80px;
-        width: 50px;
-        height: 1400px;
-        transform: rotate(-12deg);
+        left: 990px;
+        top: -90px;
+        width: 48px;
+        height: 1450px;
+        transform: rotate(-10deg);
     }}
 
     .water-line {{
         position: absolute;
         left: -80px;
         bottom: 24px;
-        width: 1550px;
+        width: 1700px;
         height: 70px;
-        transform: rotate(-5deg);
+        transform: rotate(-4deg);
         background:
             repeating-linear-gradient(
                 120deg,
@@ -1358,6 +1357,7 @@ def make_main_scene_html(
             #8ec5ff;
         border-radius: 999px;
         z-index: 1;
+        pointer-events: none;
     }}
 
     .district-zone {{
@@ -1900,7 +1900,7 @@ def make_main_scene_html(
                     <div class="hero-title">A~E구역이 하나로 연결된 마을형 스마트시티 시뮬레이션</div>
                     <div class="hero-desc">
                         하나의 마을 지도 안에 A구역부터 E구역까지 함께 배치했습니다.
-                        각 구역의 정책 아이템, 시설 변화, 주민 반응, 댓글, 만족도를 모두 보이도록 구조를 재정리했습니다.
+                        구역 사이 간격을 충분히 확보해 카드가 서로 겹치지 않도록 수정했습니다.
                     </div>
                 </div>
 
@@ -1969,8 +1969,7 @@ def make_main_scene_html(
 
         <div class="section-title">🏘️ NOVA시 통합 마을 지도</div>
         <div class="section-sub">
-            A~E구역이 하나의 마을 안에 함께 배치됩니다.
-            각 구역에는 정책 아이템, 시설 오브젝트, 주민 이모지, 만족도 댓글이 표시됩니다.
+            1행에는 B구역과 C구역, 2행에는 A구역·D구역·E구역을 배치하여 겹침을 방지했습니다.
         </div>
 
         <div class="village-scroll">
@@ -2018,7 +2017,7 @@ def make_main_scene_html(
             </div>
             {dashboard_button}
             <div class="mini-note">
-                이 버전은 만족도 박스가 잘리지 않도록 구역 내부 높이와 전체 마을 비율을 다시 조정했습니다.
+                이 버전은 구역 좌표를 완전히 재배치해 카드 간 겹침을 방지했습니다.
             </div>
         </div>
     </div>
@@ -2117,10 +2116,11 @@ if not HAS_CLASSES:
 st.markdown("""
 <div class="box-warn">
 <b>이번 수정의 핵심</b><br>
-- 마을형 지도 유지<br>
-- 전체 구역 크기를 이전보다 축소해 화면 비율 개선<br>
-- 만족도 박스가 잘리지 않도록 구역 내부 구조와 높이 재조정<br>
-- 적용 아이템, 시설 변화, 주민 반응, 댓글, 만족도를 모두 분리해서 표시
+- 구역 카드 간 겹침 방지를 위해 마을 좌표를 완전히 재배치<br>
+- 위쪽 행: B구역, C구역<br>
+- 아래쪽 행: A구역, D구역, E구역<br>
+- 도로는 배경으로만 보이도록 z-index를 낮게 유지<br>
+- 만족도 박스가 다른 구역을 덮지 않도록 행 간격을 충분히 확보
 </div>
 """, unsafe_allow_html=True)
 
@@ -2155,7 +2155,7 @@ scene_html = make_main_scene_html(
     dashboard_url
 )
 
-components.html(scene_html, height=3350, scrolling=True)
+components.html(scene_html, height=3450, scrolling=True)
 
 st.markdown("### 발표용 연결 멘트 예시")
 st.markdown("""
