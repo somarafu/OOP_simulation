@@ -15,6 +15,8 @@ streamlit run simulation_story.py
 import time
 import os
 import sys
+import urllib.parse
+
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
@@ -174,6 +176,7 @@ st.markdown(
         padding: 20px 22px;
         text-align: center;
         box-shadow: 0 8px 22px rgba(27,31,36,0.05);
+        height: 100%;
     }
 
     .metric-label {
@@ -196,6 +199,7 @@ st.markdown(
         font-size: 13px;
         color: #57606a;
         margin-top: 6px;
+        line-height: 1.55;
     }
 
     .arrow {
@@ -241,6 +245,230 @@ st.markdown(
         color: #1f2328;
         line-height: 1.65;
         font-size: 14px;
+    }
+
+    .process-wrap {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 12px;
+        margin: 18px 0 22px;
+    }
+
+    .process-step {
+        background: #f6f8fa;
+        border: 1px solid #d0d7de;
+        border-radius: 18px;
+        padding: 16px 14px;
+        text-align: center;
+        position: relative;
+        min-height: 138px;
+    }
+
+    .process-step.active {
+        background: linear-gradient(135deg, #ddf4ff 0%, #f6f8fa 100%);
+        border: 2px solid #0969da;
+        box-shadow: 0 10px 26px rgba(9,105,218,0.15);
+    }
+
+    .process-icon {
+        font-size: 30px;
+        margin-bottom: 8px;
+    }
+
+    .process-title {
+        font-size: 14px;
+        font-weight: 950;
+        color: #1f2328;
+        margin-bottom: 6px;
+    }
+
+    .process-desc {
+        font-size: 12px;
+        color: #57606a;
+        line-height: 1.45;
+    }
+
+    .explain-grid {
+        display: grid;
+        grid-template-columns: 1fr 42px 1fr 42px 1fr;
+        align-items: center;
+        gap: 12px;
+        margin: 18px 0;
+    }
+
+    .explain-node {
+        background: #ffffff;
+        border: 1px solid #d0d7de;
+        border-radius: 18px;
+        padding: 18px 20px;
+        text-align: center;
+        box-shadow: 0 8px 20px rgba(27,31,36,0.06);
+    }
+
+    .explain-node .node-icon {
+        font-size: 34px;
+        margin-bottom: 8px;
+    }
+
+    .explain-node .node-title {
+        font-size: 16px;
+        font-weight: 950;
+        color: #1f2328;
+        margin-bottom: 6px;
+    }
+
+    .explain-node .node-desc {
+        font-size: 13px;
+        color: #57606a;
+        line-height: 1.55;
+    }
+
+    .explain-arrow {
+        font-size: 32px;
+        font-weight: 950;
+        color: #0969da;
+        text-align: center;
+    }
+
+    .loop-diagram {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 10px;
+        align-items: stretch;
+        margin-top: 16px;
+    }
+
+    .loop-node {
+        background: #ffffff;
+        border: 1px solid #d0d7de;
+        border-radius: 16px;
+        padding: 16px 14px;
+        text-align: center;
+        box-shadow: 0 8px 20px rgba(27,31,36,0.05);
+    }
+
+    .loop-node .loop-icon {
+        font-size: 28px;
+        margin-bottom: 8px;
+    }
+
+    .loop-node .loop-title {
+        font-size: 14px;
+        font-weight: 950;
+        color: #1f2328;
+        margin-bottom: 4px;
+    }
+
+    .loop-node .loop-desc {
+        font-size: 12px;
+        color: #57606a;
+        line-height: 1.5;
+    }
+
+    .district-card-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 10px;
+        margin: 14px 0 20px;
+    }
+
+    .district-card {
+        background: #ffffff;
+        border: 1px solid #d0d7de;
+        border-radius: 16px;
+        padding: 16px 14px;
+        text-align: center;
+        box-shadow: 0 8px 20px rgba(27,31,36,0.05);
+    }
+
+    .district-card .district-icon {
+        font-size: 28px;
+        margin-bottom: 6px;
+    }
+
+    .district-card .district-name {
+        font-size: 14px;
+        font-weight: 950;
+        color: #1f2328;
+        margin-bottom: 5px;
+    }
+
+    .district-card .district-desc {
+        font-size: 12px;
+        color: #57606a;
+        line-height: 1.45;
+    }
+
+    .formula-box {
+        background: #f6f8fa;
+        border: 1px solid #d0d7de;
+        border-radius: 18px;
+        padding: 18px 20px;
+        margin-top: 14px;
+    }
+
+    .formula-title {
+        font-size: 16px;
+        font-weight: 950;
+        color: #1f2328;
+        margin-bottom: 8px;
+    }
+
+    .formula-text {
+        font-size: 14px;
+        line-height: 1.8;
+        color: #57606a;
+    }
+
+    .dashboard-link-card {
+        background: #ffffff;
+        border: 1px solid #d0d7de;
+        border-radius: 22px;
+        padding: 24px 26px;
+        box-shadow: 0 10px 26px rgba(27,31,36,0.07);
+        margin-top: 18px;
+    }
+
+    .dashboard-link-title {
+        font-size: 22px;
+        font-weight: 950;
+        color: #1f2328;
+        margin-bottom: 8px;
+    }
+
+    .dashboard-link-desc {
+        font-size: 14px;
+        color: #57606a;
+        line-height: 1.75;
+        margin-bottom: 16px;
+    }
+
+    .dashboard-button {
+        display: inline-block;
+        background: #0969da;
+        color: white !important;
+        padding: 12px 18px;
+        border-radius: 14px;
+        text-decoration: none !important;
+        font-weight: 900;
+        font-size: 14px;
+        box-shadow: 0 8px 18px rgba(9,105,218,0.22);
+    }
+
+    @media (max-width: 1000px) {
+        .process-wrap,
+        .loop-diagram,
+        .district-card-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .explain-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .explain-arrow {
+            transform: rotate(90deg);
+        }
     }
     </style>
     """,
@@ -386,6 +614,43 @@ def score_color(score):
     return "#1a7f37"
 
 
+def get_dashboard_url_from_secrets():
+    try:
+        return st.secrets.get("DASHBOARD_URL", "")
+    except Exception:
+        return ""
+
+
+def build_query_string(
+    preset_choice,
+    welfare,
+    education,
+    energy_infra,
+    general_infra,
+    safety,
+    solar,
+    hydrogen,
+    ess,
+    external
+):
+    params = {
+        "preset": preset_choice,
+        "welfare": welfare,
+        "education": education,
+        "energy_infra": energy_infra,
+        "general_infra": general_infra,
+        "safety": safety,
+        "solar": solar,
+        "hydrogen": hydrogen,
+        "ess": ess,
+        "external": external,
+    }
+    return urllib.parse.urlencode(params)
+
+
+# ==================================================
+# 차트 함수
+# ==================================================
 def make_budget_bar_chart(welfare, education, energy_infra, general_infra, safety):
     labels = ["복지", "교육", "에너지 인프라", "일반 인프라", "안전"]
     values = [welfare, education, energy_infra, general_infra, safety]
@@ -401,7 +666,7 @@ def make_budget_bar_chart(welfare, education, energy_infra, general_infra, safet
 
     fig.update_layout(
         height=320,
-        margin=dict(l=20, r=20, t=30, b=20),
+        margin=dict(l=20, r=20, t=40, b=20),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         title=dict(text="입력된 예산 배분", font=dict(color="#1f2328", size=16)),
@@ -432,7 +697,7 @@ def make_energy_bar_chart(solar, hydrogen, ess, external):
 
     fig.update_layout(
         height=320,
-        margin=dict(l=20, r=20, t=30, b=20),
+        margin=dict(l=20, r=20, t=40, b=20),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         title=dict(text="입력된 에너지 배분", font=dict(color="#1f2328", size=16)),
@@ -445,6 +710,112 @@ def make_energy_bar_chart(solar, hydrogen, ess, external):
         ),
         showlegend=False,
     )
+    return fig
+
+
+def make_need_score_chart(resource):
+    need = resource.get_need_ratios()
+
+    labels = {
+        "health_safety": "건강·안전",
+        "mobility": "모빌리티",
+        "activities": "활동·문화",
+        "opportunities": "기회·교육",
+        "governance": "거버넌스",
+    }
+
+    names = []
+    scores = []
+
+    for key, label in labels.items():
+        ratio = need[key]
+        score = budget_to_fulfillment(ratio)
+        names.append(label)
+        scores.append(score)
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Bar(
+        y=names,
+        x=scores,
+        orientation="h",
+        text=[f"{s:.1f}점" for s in scores],
+        textposition="outside",
+        marker_color="#0969da",
+        hovertemplate="<b>%{y}</b><br>충족도: %{x:.1f}점<extra></extra>",
+        name="니즈 충족도"
+    ))
+
+    fig.update_layout(
+        height=330,
+        margin=dict(l=20, r=30, t=45, b=20),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        title=dict(text="예산 배분이 시민 니즈 충족도로 변환된 결과", font=dict(color="#1f2328", size=16)),
+        xaxis=dict(
+            title=dict(text="충족도 점수", font=dict(color="#1f2328")),
+            range=[0, 105],
+            tickfont=dict(color="#1f2328"),
+            gridcolor="#d0d7de"
+        ),
+        yaxis=dict(
+            tickfont=dict(color="#1f2328"),
+            autorange="reversed"
+        ),
+        showlegend=False,
+    )
+
+    return fig
+
+
+def make_energy_waterfall_chart(solar, hydrogen, ess, external):
+    solar_contribution = solar * 0.7
+    hydrogen_contribution = hydrogen * 0.9
+    ess_contribution = ess * 0.6
+    external_contribution = external * 0.0
+    total = solar_contribution + hydrogen_contribution + ess_contribution + external_contribution
+
+    fig = go.Figure(go.Waterfall(
+        name="에너지 자립률 기여도",
+        orientation="v",
+        measure=["relative", "relative", "relative", "relative", "total"],
+        x=["태양광", "수소연료전지", "ESS", "외부전력망", "예상 자립률"],
+        y=[
+            solar_contribution,
+            hydrogen_contribution,
+            ess_contribution,
+            external_contribution,
+            total
+        ],
+        text=[
+            f"+{solar_contribution:.1f}%",
+            f"+{hydrogen_contribution:.1f}%",
+            f"+{ess_contribution:.1f}%",
+            f"+{external_contribution:.1f}%",
+            f"{total:.1f}%"
+        ],
+        textposition="outside",
+        connector={"line": {"color": "#8c959f"}},
+        increasing={"marker": {"color": "#0969da"}},
+        decreasing={"marker": {"color": "#cf222e"}},
+        totals={"marker": {"color": "#1a7f37"}},
+    ))
+
+    fig.update_layout(
+        height=350,
+        margin=dict(l=20, r=20, t=45, b=20),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        title=dict(text="에너지원별 자립률 기여도", font=dict(color="#1f2328", size=16)),
+        xaxis=dict(tickfont=dict(color="#1f2328")),
+        yaxis=dict(
+            title=dict(text="자립률 기여도(%)", font=dict(color="#1f2328")),
+            tickfont=dict(color="#1f2328"),
+            gridcolor="#d0d7de"
+        ),
+        showlegend=False
+    )
+
     return fig
 
 
@@ -470,7 +841,7 @@ def make_final_district_chart(result):
 
     fig.update_layout(
         height=360,
-        margin=dict(l=20, r=20, t=40, b=20),
+        margin=dict(l=20, r=20, t=45, b=20),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         title=dict(text="최종 구역별 시민 만족도", font=dict(color="#1f2328", size=16)),
@@ -510,6 +881,32 @@ def make_need_table(resource):
     return pd.DataFrame(rows)
 
 
+def make_final_summary_table(result):
+    rows = []
+    for key, label in zip(DISTRICT_KEYS, DISTRICT_LABELS):
+        score = result["districts"][key]
+
+        if score < 50:
+            status = "위험"
+        elif score < 60:
+            status = "주의"
+        elif score < 75:
+            status = "양호"
+        else:
+            status = "우수"
+
+        rows.append({
+            "구역": label,
+            "만족도": f"{score:.1f}점",
+            "상태": status
+        })
+
+    return pd.DataFrame(rows)
+
+
+# ==================================================
+# HTML 시각화 함수
+# ==================================================
 def show_step_header(num, title, body):
     st.markdown(
         f"""
@@ -523,6 +920,230 @@ def show_step_header(num, title, body):
         """,
         unsafe_allow_html=True
     )
+
+
+def show_process_map(active_step):
+    steps = [
+        (1, "💰", "예산 처치", "복지·교육·인프라·안전 배분"),
+        (2, "🧭", "니즈 변환", "시민이 체감하는 5개 니즈로 변환"),
+        (3, "⚡", "자립률 계산", "에너지원별 기여도 계산"),
+        (4, "🔁", "선순환 효과", "절감액을 복지·교육으로 환원"),
+        (5, "🏙️", "만족도 산출", "구역별 시민 만족도 계산"),
+    ]
+
+    html = '<div class="process-wrap">'
+    for num, icon, title, desc in steps:
+        active_class = " active" if num == active_step else ""
+        html += f"""
+        <div class="process-step{active_class}">
+            <div class="process-icon">{icon}</div>
+            <div class="process-title">{num}. {title}</div>
+            <div class="process-desc">{desc}</div>
+        </div>
+        """
+    html += "</div>"
+
+    st.markdown(html, unsafe_allow_html=True)
+
+
+def show_treatment_to_result_diagram():
+    st.markdown(
+        """
+        <div class="explain-grid">
+            <div class="explain-node">
+                <div class="node-icon">🎛️</div>
+                <div class="node-title">정책 처치</div>
+                <div class="node-desc">예산 배분과 에너지 배분을 입력합니다.</div>
+            </div>
+            <div class="explain-arrow">→</div>
+            <div class="explain-node">
+                <div class="node-icon">⚙️</div>
+                <div class="node-title">모델 계산</div>
+                <div class="node-desc">시민 니즈, 에너지 자립률, 절감액 환원을 계산합니다.</div>
+            </div>
+            <div class="explain-arrow">→</div>
+            <div class="explain-node">
+                <div class="node-icon">📊</div>
+                <div class="node-title">결과 산출</div>
+                <div class="node-desc">구역별 만족도와 도시 평균 만족도를 보여줍니다.</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+def show_energy_formula_box(solar, hydrogen, ess, external):
+    solar_c = solar * 0.7
+    hydrogen_c = hydrogen * 0.9
+    ess_c = ess * 0.6
+    external_c = external * 0.0
+    total = solar_c + hydrogen_c + ess_c + external_c
+
+    st.markdown(
+        f"""
+        <div class="formula-box">
+            <div class="formula-title">⚡ 에너지 자립률 계산 과정</div>
+            <div class="formula-text">
+                태양광 {solar}% × 0.7 = <b>{solar_c:.1f}%</b><br>
+                수소연료전지 {hydrogen}% × 0.9 = <b>{hydrogen_c:.1f}%</b><br>
+                ESS {ess}% × 0.6 = <b>{ess_c:.1f}%</b><br>
+                외부전력망 {external}% × 0.0 = <b>{external_c:.1f}%</b><br>
+                <hr style="border:none;border-top:1px solid #d0d7de;margin:10px 0;">
+                예상 에너지 자립률 = <b style="color:#0969da;font-size:18px;">{total:.1f}%</b>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+def show_feedback_loop_diagram():
+    st.markdown(
+        """
+        <div class="loop-diagram">
+            <div class="loop-node">
+                <div class="loop-icon">⚡</div>
+                <div class="loop-title">자립률 상승</div>
+                <div class="loop-desc">태양광·수소·ESS 비중이 높아짐</div>
+            </div>
+            <div class="loop-node">
+                <div class="loop-icon">🔌</div>
+                <div class="loop-title">외부 의존 감소</div>
+                <div class="loop-desc">외부전력망 사용 비중이 줄어듦</div>
+            </div>
+            <div class="loop-node">
+                <div class="loop-icon">💸</div>
+                <div class="loop-title">비용 절감</div>
+                <div class="loop-desc">에너지 비용 절감 효과 발생</div>
+            </div>
+            <div class="loop-node">
+                <div class="loop-icon">🤝</div>
+                <div class="loop-title">예산 환원</div>
+                <div class="loop-desc">복지·교육 예산으로 일부 재배분</div>
+            </div>
+            <div class="loop-node">
+                <div class="loop-icon">😊</div>
+                <div class="loop-title">만족도 상승</div>
+                <div class="loop-desc">시민 체감 만족도 개선</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+def show_district_structure_cards():
+    st.markdown(
+        """
+        <div class="district-card-grid">
+            <div class="district-card">
+                <div class="district-icon">🏭</div>
+                <div class="district-name">A구역 산업단지</div>
+                <div class="district-desc">근로자 중심<br>모빌리티·기회 민감</div>
+            </div>
+            <div class="district-card">
+                <div class="district-icon">🎓</div>
+                <div class="district-name">B구역 대학가</div>
+                <div class="district-desc">학생 중심<br>교육·문화 민감</div>
+            </div>
+            <div class="district-card">
+                <div class="district-icon">🏥</div>
+                <div class="district-name">C구역 복지타운</div>
+                <div class="district-desc">노인 중심<br>건강·안전 민감</div>
+            </div>
+            <div class="district-card">
+                <div class="district-icon">🏙️</div>
+                <div class="district-name">D구역 신도시</div>
+                <div class="district-desc">혼합형 구성<br>균형 정책 반응</div>
+            </div>
+            <div class="district-card">
+                <div class="district-icon">🏚️</div>
+                <div class="district-name">E구역 구도심</div>
+                <div class="district-desc">취약성 반영<br>복지·안전 민감</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+def show_dashboard_connection_card(
+    dashboard_url,
+    preset_choice,
+    welfare,
+    education,
+    energy_infra,
+    general_infra,
+    safety,
+    solar,
+    hydrogen,
+    ess,
+    external
+):
+    query = build_query_string(
+        preset_choice,
+        welfare,
+        education,
+        energy_infra,
+        general_infra,
+        safety,
+        solar,
+        hydrogen,
+        ess,
+        external
+    )
+
+    if dashboard_url:
+        separator = "&" if "?" in dashboard_url else "?"
+        linked_url = f"{dashboard_url}{separator}{query}"
+
+        st.markdown(
+            f"""
+            <div class="dashboard-link-card">
+                <div class="dashboard-link-title">📊 2차 결과물: 상세 대시보드로 이동</div>
+                <div class="dashboard-link-desc">
+                    지금 시뮬레이션에서 사용한 정책 처치 값을 기반으로,
+                    기존에 만들어둔 대시보드에서 구역별 만족도, 시나리오 비교,
+                    시스템 분석을 더 자세히 확인할 수 있습니다.
+                </div>
+                <a class="dashboard-button" href="{linked_url}" target="_blank">
+                    상세 대시보드 열기 →
+                </a>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+    else:
+        st.markdown(
+            """
+            <div class="dashboard-link-card">
+                <div class="dashboard-link-title">📊 다음 단계: 기존 대시보드 확인</div>
+                <div class="dashboard-link-desc">
+                    이 시뮬레이션은 1차 결과물입니다. 발표에서는 이 과정을 먼저 보여준 뒤,
+                    기존에 만든 dashboard.py를 실행해서 2차 결과물인 상세 대시보드를 보여주면 됩니다.
+                    Streamlit Cloud에 배포한 대시보드 URL이 있다면 왼쪽 사이드바의
+                    <b>2차 대시보드 URL</b>에 입력하면 이동 버튼이 생성됩니다.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    st.markdown("#### 현재 시뮬레이션 입력값 요약")
+    summary_df = pd.DataFrame([
+        {"구분": "예산", "항목": "복지", "값": f"{welfare}%"},
+        {"구분": "예산", "항목": "교육", "값": f"{education}%"},
+        {"구분": "예산", "항목": "에너지 인프라", "값": f"{energy_infra}%"},
+        {"구분": "예산", "항목": "일반 인프라", "값": f"{general_infra}%"},
+        {"구분": "예산", "항목": "안전", "값": f"{safety}%"},
+        {"구분": "에너지", "항목": "태양광", "값": f"{solar}%"},
+        {"구분": "에너지", "항목": "수소연료전지", "값": f"{hydrogen}%"},
+        {"구분": "에너지", "항목": "ESS", "값": f"{ess}%"},
+        {"구분": "에너지", "항목": "외부전력망", "값": f"{external}%"},
+    ])
+    st.dataframe(summary_df, use_container_width=True, hide_index=True)
+
 
 # ==================================================
 # 사이드바 입력
@@ -581,6 +1202,15 @@ with st.sidebar:
     st.markdown("---")
 
     speed = st.slider("재생 속도", 0.2, 2.0, 0.9, 0.1)
+
+    default_dashboard_url = get_dashboard_url_from_secrets()
+    dashboard_url = st.text_input(
+        "2차 대시보드 URL",
+        value=default_dashboard_url,
+        placeholder="예: https://your-dashboard.streamlit.app"
+    )
+    st.caption("기존 dashboard.py를 별도 앱으로 배포했다면 그 URL을 입력하세요.")
+
     play = st.button("🎬 시뮬레이션 과정 재생", type="primary", use_container_width=True)
 
 # ==================================================
@@ -652,6 +1282,8 @@ if not play:
         unsafe_allow_html=True
     )
 
+    show_treatment_to_result_diagram()
+
     col1, col2 = st.columns(2)
     with col1:
         st.plotly_chart(
@@ -666,6 +1298,20 @@ if not play:
             config={"displayModeBar": False}
         )
 
+    show_dashboard_connection_card(
+        dashboard_url,
+        preset_choice,
+        welfare,
+        education,
+        energy_infra,
+        general_infra,
+        safety,
+        solar,
+        hydrogen,
+        ess,
+        external
+    )
+
     st.stop()
 
 # ==================================================
@@ -679,28 +1325,67 @@ content_area = st.empty()
 status_area.info("1단계 실행 중: 예산 배분 처치를 적용합니다.")
 progress.progress(10)
 with content_area.container():
+    show_process_map(1)
+
     show_step_header(
         1,
         "예산 배분 처치 적용",
         "사용자가 설정한 예산 배분은 도시 정책의 출발점입니다. 이 단계에서는 복지, 교육, 에너지 인프라, 일반 인프라, 안전에 투입되는 자원의 비중을 확인합니다."
     )
+
+    show_treatment_to_result_diagram()
+
     st.plotly_chart(
         make_budget_bar_chart(welfare, education, energy_infra, general_infra, safety),
         use_container_width=True,
         config={"displayModeBar": False}
     )
+
 time.sleep(speed)
 
 # Step 2
 status_area.info("2단계 실행 중: 예산 배분을 시민 니즈 충족도로 변환합니다.")
 progress.progress(30)
 with content_area.container():
+    show_process_map(2)
+
     show_step_header(
         2,
         "예산 → 시민 니즈 충족도 변환",
         "예산은 단순 금액이 아니라 시민이 체감하는 건강·안전, 모빌리티, 활동·문화, 기회·교육, 거버넌스 니즈로 변환됩니다."
     )
-    st.dataframe(make_need_table(resource), use_container_width=True, hide_index=True)
+
+    col1, col2 = st.columns([1.1, 1])
+
+    with col1:
+        st.plotly_chart(
+            make_need_score_chart(resource),
+            use_container_width=True,
+            config={"displayModeBar": False}
+        )
+
+    with col2:
+        st.markdown(
+            """
+            <div class="story-card">
+                <div class="story-title">🧭 이 단계에서 일어나는 일</div>
+                <div class="story-desc">
+                    예산 항목은 시민이 직접 체감하는 니즈로 다시 해석됩니다.<br><br>
+                    예를 들어 복지와 안전 예산은 건강·안전 니즈에 영향을 주고,
+                    교육 예산은 기회·교육 니즈에 영향을 줍니다.
+                    즉, 이 단계는 <b>정책 예산을 시민 체감 언어로 번역하는 과정</b>입니다.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        st.dataframe(
+            make_need_table(resource),
+            use_container_width=True,
+            hide_index=True
+        )
+
 time.sleep(speed)
 
 # Step 3
@@ -708,19 +1393,23 @@ predicted_rate = expected_energy_self_rate(solar, hydrogen, ess, external)
 status_area.info("3단계 실행 중: 에너지 배분으로 에너지 자립률을 계산합니다.")
 progress.progress(50)
 with content_area.container():
+    show_process_map(3)
+
     show_step_header(
         3,
         "에너지 배분 → 에너지 자립률 계산",
         "태양광, 수소연료전지, ESS는 도시 자체의 에너지 자립률에 기여합니다. 외부전력망은 전력 공급에는 도움을 주지만 자체 생산이 아니므로 자립률에는 기여하지 않습니다."
     )
 
-    col1, col2 = st.columns([1.1, 1])
+    col1, col2 = st.columns([1.15, 1])
+
     with col1:
         st.plotly_chart(
-            make_energy_bar_chart(solar, hydrogen, ess, external),
+            make_energy_waterfall_chart(solar, hydrogen, ess, external),
             use_container_width=True,
             config={"displayModeBar": False}
         )
+
     with col2:
         st.markdown(
             f"""
@@ -728,18 +1417,23 @@ with content_area.container():
                 <div class="metric-label">예상 에너지 자립률</div>
                 <div class="metric-value">{predicted_rate * 100:.1f}%</div>
                 <div class="metric-sub">
-                    태양광×0.7 + 수소×0.9 + ESS×0.6 + 외부전력망×0.0
+                    에너지원별 기여도를 합산한 결과
                 </div>
             </div>
             """,
             unsafe_allow_html=True
         )
+
+        show_energy_formula_box(solar, hydrogen, ess, external)
+
 time.sleep(speed)
 
 # Step 4
 status_area.info("4단계 실행 중: 에너지 자립률에 따른 선순환 효과를 계산합니다.")
 progress.progress(70)
 with content_area.container():
+    show_process_map(4)
+
     show_step_header(
         4,
         "에너지 자립률 → 절감액 환원 효과",
@@ -785,30 +1479,23 @@ with content_area.container():
             unsafe_allow_html=True
         )
 
-    st.markdown('<div class="arrow">↓</div>', unsafe_allow_html=True)
+    show_feedback_loop_diagram()
 
-    st.markdown(
-        """
-        <div class="story-card">
-            <div class="story-title">🔁 선순환 구조</div>
-            <div class="story-desc">
-                에너지 자립률 상승 → 외부 전력 의존 감소 → 비용 절감 → 복지·교육 예산 환원 → 시민 만족도 상승
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
 time.sleep(speed)
 
 # Step 5
 status_area.success("5단계 완료: 구역별 시민 만족도와 도시 평균 만족도가 산출되었습니다.")
 progress.progress(100)
 with content_area.container():
+    show_process_map(5)
+
     show_step_header(
         5,
         "최종 결과 산출",
         "마지막으로 각 구역의 시민 구성과 니즈 차이를 반영하여 구역별 만족도와 도시 평균 만족도를 계산합니다."
     )
+
+    show_district_structure_cards()
 
     col1, col2, col3 = st.columns(3)
 
@@ -855,6 +1542,13 @@ with content_area.container():
         config={"displayModeBar": False}
     )
 
+    st.markdown("#### 구역별 결과 요약")
+    st.dataframe(
+        make_final_summary_table(result),
+        use_container_width=True,
+        hide_index=True
+    )
+
 st.markdown(
     """
     <div class="final-card">
@@ -868,14 +1562,31 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-st.markdown("### 다음 단계")
+show_dashboard_connection_card(
+    dashboard_url,
+    preset_choice,
+    welfare,
+    education,
+    energy_infra,
+    general_infra,
+    safety,
+    solar,
+    hydrogen,
+    ess,
+    external
+)
+
+st.markdown("### 로컬 실행 시 다음 단계")
 st.markdown(
     """
-    이제 기존에 만든 `dashboard.py`를 실행해서,  
-    같은 입력값에 대한 **상세 대시보드 결과**를 보여주면 됩니다.
+    기존 대시보드를 로컬에서 실행하려면 아래 명령어를 사용하면 됩니다.
 
     ```bash
     streamlit run dashboard.py
     ```
+
+    Streamlit Cloud에서 기존 대시보드를 별도 앱으로 배포했다면,
+    왼쪽 사이드바의 **2차 대시보드 URL**에 해당 주소를 입력하면
+    이 시뮬레이션 마지막 화면에서 바로 이동할 수 있습니다.
     """
 )
